@@ -1,5 +1,4 @@
 
-
 #
 # read the data from the URL and print it
 #
@@ -10,9 +9,13 @@ import time
 
 import sys
 
+import numpy as np
 
-SLEEP_TIME = 0.5
-SERVER_IP = sys.argv[1]
+SLEEP_TIME_MIN = int(sys.argv[1])
+SLEEP_TIME_MAX = int(sys.argv[2])
+
+SERVER_IP = sys.argv[-1]
+
 
 output_name = "client_delay.csv"
 with open(output_name, 'a') as f:
@@ -23,7 +26,7 @@ t_init_server = time.time()
 
 while True:
     t_init = time.time()
-    webUrl  = urllib.request.urlopen(f'http://{SERVER_IP}/')
+    webUrl  = urllib.request.urlopen(f'http://{SERVER_IP}')
 
     #get the result code and print it
     # print("result code: " + str(webUrl.getcode()))
@@ -41,4 +44,4 @@ while True:
         f.write(stat)
         f.write("\n")
 
-    time.sleep(SLEEP_TIME)
+    time.sleep(np.random.uniform(SLEEP_TIME_MIN, SLEEP_TIME_MAX))

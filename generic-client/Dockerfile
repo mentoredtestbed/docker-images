@@ -1,3 +1,5 @@
+LABEL version="1.0"
+
 FROM debian
 
 ENV LANG C.UTF-8
