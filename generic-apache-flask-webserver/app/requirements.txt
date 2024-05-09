@@ -1,2 +1,2 @@
-Flask
+flask==2.3.1
 lorem
