@@ -17,7 +17,3 @@ def about():
 def random_text(min_words, max_words):
     lorem = TextLorem(wsep=' ', srange=(int(min_words),int(max_words)))
     return render_template('random_text.html', random_text=lorem.sentence())
-
-
-
-
