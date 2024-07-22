@@ -1,4 +1,4 @@
-FROM ghcr.io/brunomeyer/mentored-base
+FROM ghcr.io/mentoredtested/mentored-base
 
 RUN pip3 install --break-system-packages numpy
 
