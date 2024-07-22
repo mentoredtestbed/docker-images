@@ -17,7 +17,10 @@ EGRESS_KBS="${EGRESS_KBS:-99999999}"
 
 ADD_SERVER_IP_TO_COMMAND="${ADD_SERVER_IP_TO_COMMAND:-no}"
 
-wondershaper $NET_INTERFACE $INGRESS_KBS $EGRESS_KBS
+# wondershaper $NET_INTERFACE $INGRESS_KBS $EGRESS_KBS
+
+# Macvlan mtu configuration
+ifconfig net1 mtu 1000 up
 
 while [ ! -f /MENTORED_READY ];
 do
