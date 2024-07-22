@@ -17,7 +17,10 @@ EGRESS_KBS="${EGRESS_KBS:-99999999}"
 
 ADD_SERVER_IP_TO_COMMAND="${ADD_SERVER_IP_TO_COMMAND:-no}"
 
-wondershaper $NET_INTERFACE $INGRESS_KBS $EGRESS_KBS
+# wondershaper $NET_INTERFACE $INGRESS_KBS $EGRESS_KBS
+
+# Macvlan mtu configuration
+ifconfig net1 mtu 1000 up
 
 while [ ! -f /MENTORED_READY ];
 do
@@ -32,10 +35,8 @@ then
     #TODO: Dynamic Node Actor name, interface name, and var NAME
     python3 /create_env_from_mentored_ip_list.py /MENTORED_IP_LIST.json na-server $MENTORED_EXP_IFNAME SERVER /MENTORED_ENV.source
     source /MENTORED_ENV.source
-fi
-
-if [ "$ADD_SERVER_IP_TO_COMMAND" == "no" ]; then
-    SERVER=""
+    
+    python3 /ping_other_ips.py /MENTORED_IP_LIST.json $MENTORED_EXP_IFNAME
 fi
 
 # WAIT_FOR_TIME is the content of /MENTORED_READY
@@ -48,11 +49,17 @@ done
 
 sleep $TIME_WAIT_START
 
+CMD_SUFFIX=$SERVER
+if [ "$ADD_SERVER_IP_TO_COMMAND" == "no" ]; then
+    CMD_SUFFIX=""
+fi
+
 if [ "$TIMEOUT_CMD" -gt 0 ]; then
-    CMD="$@ $SERVER"
+    
+    CMD="$@ $CMD_SUFFIX"
     echo "$CMD"
     timeout $TIMEOUT_CMD $CMD
     tail -f /dev/null
 else
-    eval "$@ $SERVER"
+    eval "$@ $CMD_SUFFIX"
 fi
