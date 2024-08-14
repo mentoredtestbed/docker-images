@@ -1,4 +1,4 @@
-FROM ghcr.io/mentoredtested/mentored-base
+FROM ghcr.io/mentoredtestbed/mentored-base:latest
 
 RUN pip3 install --break-system-packages numpy
 
