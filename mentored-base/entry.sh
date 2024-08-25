@@ -35,6 +35,7 @@ then
     #TODO: Dynamic Node Actor name, interface name, and var NAME
     python3 /create_env_from_mentored_ip_list.py /MENTORED_IP_LIST.json na-server $MENTORED_EXP_IFNAME SERVER /MENTORED_ENV.source
     source /MENTORED_ENV.source
+    echo "source /MENTORED_ENV.source" >> /root/.bashrc
     
     python3 /ping_other_ips.py /MENTORED_IP_LIST.json $MENTORED_EXP_IFNAME
 fi

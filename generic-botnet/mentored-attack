@@ -1,0 +1,111 @@
+#!/bin/bash
+
+mode=$1
+target=$2
+iname=$3
+attack_args=${@:4}
+
+if [ -z "$mode" ]
+then
+    mode="nmap"
+fi
+
+mentored-registry-action -a "attack-$mode" -o /app/results/ -n "Starting attack $mode on $target using $attack_args"
+
+target_list=$(mentored-get-ip --na-regex $target --iname $iname)
+
+# Check if target_list is empty
+if [ -z "$target_list" ]
+then
+    echo "No target found"
+    # Use the parameter $2 as target
+    target_list=$2
+fi
+
+if [ "$mode" == "nmap" ]
+then
+    # For each line returned by the command mentored-get-ip
+    for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+    do
+        # Execute the command nmap with the ip as argument
+        nmap $attack_args $ip
+    done
+elif [ "$mode" == "slowloris" ]
+then
+    for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+    do
+        slowloris $attack_args $ip
+    done
+elif [ "$mode" == "nikto" ]
+then
+    for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+    do
+        nikto -host $ip $attack_args
+    done
+# elif [ "$mode" == "hydra" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         hydra $attack_args $ip
+#     done
+# elif [ "$mode" == "sqlmap" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         sqlmap $attack_args $ip
+#     done
+# elif [ "$mode" == "metasploit" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         msfconsole $attack_args $ip
+#     done
+# elif [ "$mode" == "armitage" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         armitage $attack_args $ip
+#     done
+# elif [ "$mode" == "xerxes" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         xerxes $attack_args $ip
+#     done
+elif [ "$mode" == "hping3" ]
+then
+    for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+    do
+        hping3 $attack_args $ip
+    done
+# elif [ "$mode" == "nemesis" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         nemesis $attack_args $ip
+#     done
+# elif [ "$mode" == "dnsmap" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         dnsmap $attack_args $ip
+#     done
+# elif [ "$mode" == "dnsenum" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         dnsenum $attack_args $ip
+#     done
+# elif [ "$mode" == "dnsrecon" ]
+# then
+#     for ip in $(mentored
+# then
+elif [ "$mode" == "ping" ]
+then
+    # For each line returned by the command mentored-get-ip
+    for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+    do
+        # Execute the command ping with the ip as argument
+        ping $attack_args $ip
+    done
+fi

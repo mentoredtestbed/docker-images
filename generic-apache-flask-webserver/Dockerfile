@@ -4,8 +4,7 @@
 ############################################################
 
 # Set the base image
-FROM ghcr.io/brunomeyer/mentored-base
-
+FROM ghcr.io/mentoredtestbed/mentored-base:latest
 # File Author / Maintainer
 
 RUN apt-get update && apt-get install -y apache2 \

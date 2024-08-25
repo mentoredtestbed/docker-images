@@ -11,4 +11,5 @@ else
     a2dismod reqtimeout
 fi
 
+mentored-registry-action -a apache-start -o /app/results/ -n "Starting Apache webserver"
 /usr/sbin/apache2ctl -D FOREGROUND
