@@ -1,4 +1,4 @@
-FROM ghcr.io/brunomeyer/mentored-base
+FROM ghcr.io/mentoredtestbed/mentored-base:latest
 
 RUN apt -y update && \
 apt -y install \
@@ -6,6 +6,9 @@ wondershaper procps python3 python3-pip nano vim net-tools iproute2 wget iputils
 
 RUN echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections
 
-RUN apt-get -y install tshark
+RUN apt-get -y install tshark iptables ulogd2
+
+COPY ./bin/* /usr/local/bin/
+COPY ulogd.conf /etc/ulogd.conf
 
 WORKDIR /app

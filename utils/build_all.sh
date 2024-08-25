@@ -9,7 +9,8 @@ else
 fi
 
 # Create a list with the images to build
-images=(mentored-base generic-botnet generic-client scanner vulnerable)
+images=(mentored-base generic-botnet generic-client scanner vulnerable generic-apache-flask-webserver network-monitor)
+# images=(vulnerable)
 hubprefix=ghcr.io/mentoredtestbed/
 
 # Build the images
