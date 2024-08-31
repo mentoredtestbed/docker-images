@@ -15,6 +15,7 @@ RUN pip3 install --upgrade setuptools
 RUN pip3 install --upgrade pip
 RUN pip3 install icmplib==3.0.4
 RUN pip3 install pyaml==24.7.0
+RUN pip3 install psutil==6.0.0
 
 COPY ./entry.sh /
 COPY ./create_env_from_mentored_ip_list.py /

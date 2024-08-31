@@ -5,6 +5,18 @@ import yaml
 from datetime import datetime
 import os
 
+import psutil
+import socket
+
+def get_ip_for_each_interface():
+
+    ip_addresses = {}
+    for interface, addrs in psutil.net_if_addrs().items():
+        for addr in addrs:
+            if addr.family == socket.AF_INET:
+                ip_addresses[interface] = addr.address
+    return ip_addresses
+
 def add_registry(action_name, output, notes):
     # Ensure that directory exists (recursive)
     os.makedirs(os.path.dirname(output), exist_ok=True)
@@ -23,14 +35,19 @@ def add_registry(action_name, output, notes):
     with open(output, "r") as file:
         data = yaml.load(file, Loader=yaml.FullLoader)
 
+    ip_list = get_ip_for_each_interface()
+
     curr_dt = datetime.now()
     timestamp_as_int = int(round(curr_dt.timestamp()))
+    timestamp_as_float = float(curr_dt.timestamp())
     timestamp = curr_dt.strftime("%Y-%m-%d %H:%M:%S")
     data["registry"].append({
         "action_name": action_name,
         "notes": notes,
         "timestamp": timestamp,
-        "timestamp_as_int": timestamp_as_int
+        "timestamp_as_int": timestamp_as_int,
+        "timestamp_as_float": timestamp_as_float,
+        "ip_list": ip_list,
     })
 
     with open(output, "w") as file:

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir /app/results/
+
 # Start ulogd to handle iptables logging
 ulogd -d
 
