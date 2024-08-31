@@ -28,9 +28,10 @@ RUN a2dissite 000-default.conf
 RUN a2ensite apache-flask.conf
 RUN a2enmod headers
 
-# LINK apache config to docker logs.
-RUN ln -sf /proc/self/fd/1 /var/log/apache2/access.log && \
-    ln -sf /proc/self/fd/1 /var/log/apache2/error.log
+# Create a ENV APACHE_LOG_DIR to store the logs
+ENV APACHE_LOG_DIR /app/results
+
+RUN mkdir -p /app/results
 
 EXPOSE 80
 

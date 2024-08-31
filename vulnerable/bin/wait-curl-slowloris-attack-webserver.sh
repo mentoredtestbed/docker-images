@@ -18,7 +18,8 @@ else
     wait_time=$3
 fi
 
-echo "Executing nmap ping-wait-scan.sh with target=$target, iname=$iname, wait_time=$wait_time"
+target_ip=$(mentored-get-ip --na-regex $target --iname $iname)
+echo "Executing nmap ping-wait-scan.sh with target=$target, iname=$iname, wait_time=$wait_time, target_ip=$target_ip"
 
 sleep $wait_time
 
@@ -26,7 +27,7 @@ echo "Executing 20 curl requests to the $target ..."
 mentored-registry-action -a check-attack -o /app/results/ -n "Starting 20 curl requests to $target"
 for i in {1..20}
 do
-    curl -s $target > /dev/null
+    curl $target_ip > /app/results/pre_attack_curl_$i.txt
 done
 mentored-registry-action -a end-check-attack -o /app/results/ -n "Stopping 20 curl requests to $target"
 
