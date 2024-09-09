@@ -2,7 +2,7 @@
 # Usage: sudo bash publish-container.sh ghcr.io/khalilsantana/ foo
 REPO=$1 # eg ghcr.io/khalilsantana/
 TAG=$2  # eg 0.0.1
-dependencies=("mentored-base" "infection-scenario")
+dependencies=("mentored-base")
 
 # Read from to-build.csv file to array
 IFS=, read -r -a tobuild < to-build.csv
@@ -55,16 +55,16 @@ for dir in */; do
     echo "Built $FULL_CONTAINER_IMAGE_URL"
 done
 }
-
+# Why does this not work?
 build_only() {
 for dir in ${tobuild[@]}; do
     # skip if dir is a dependency
-    if [[ " ${dependencies[@]} " =~ " ${D} " ]]; then
+    if [[ " ${dependencies[@]} " =~ " ${dir} " ]]; then
         continue
     fi
-    FULL_CONTAINER_IMAGE_URL="$REPO$D:$TAG"
+    FULL_CONTAINER_IMAGE_URL="$REPO$dir:$TAG"
     echo "Building $FULL_CONTAINER_IMAGE_URL"
-    bash -c "sudo docker-buildx build --quiet -t $REPO$D:$TAG --platform linux/amd64,linux/arm64 --push $D" ; # or use '$D'" &; here to do it in parallel
+    bash -c "sudo docker-buildx build --quiet -t $REPO$dir:$TAG --platform linux/amd64,linux/arm64 --push $dir" ; # or use '$dir'" &; here to do it in parallel
     # Exit if previous command failed
     if [ $? -ne 0 ]; then
         exit 1
