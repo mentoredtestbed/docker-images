@@ -9,7 +9,7 @@ REPO=$1 # eg ghcr.io/mentoredtestbed/
 TAG=$2  # eg 0.0.1
 TOBUILD=$3 # eg --all
 
-dependencies=("mentored-base")
+dependencies=("mentored-base" "generic-botnet")
 
 # If not root, exit
 if [ "$EUID" -ne 0 ]; then
@@ -24,13 +24,25 @@ fi
 
 # Build and push all directories in the dependencies array
 # Build dependencies first
-for D in "${dependencies[@]}"; do
-    docker-buildx build -t $REPO$D:$TAG --platform linux/amd64,linux/arm64 --push $D;
+# echo dependencies
+echo "Building depedencies: ${dependencies[@]}"
+for dir in "${dependencies[@]}"; do
+    FULL_CONTAINER_IMAGE_URL="$REPO$dir:$TAG"
+    echo "Building $FULL_CONTAINER_IMAGE_URL"
+    docker-buildx build                                     \
+                      --build-arg BASE_REPO=$REPO           \
+                      --build-arg BASE_IMAGE=mentored-base  \
+                      --build-arg BASE_IMAGE_TAG=$TAG       \
+                      -t $FULL_CONTAINER_IMAGE_URL          \
+                      --platform linux/amd64,linux/arm64    \
+                      --push $dir ; # or use '\$dir'" &; here to do it in parallel
     # Exit if previous command failed
     if [ $? -ne 0 ]; then
         exit 1
     fi
+    echo "Built $FULL_CONTAINER_IMAGE_URL"
 done
+echo "Finished building dependencies"
 
 build_all() {
     # Collect all buildable directories and call build_only on them
@@ -40,16 +52,18 @@ build_all() {
         D="${dir%/}"
         tobuild+=("$D")
     done
+    unset dir
+    unset D
     build_only
 }
 # Why does this not work?
 build_only() {
     echo "Building ${tobuild[@]}..."
     for dir in ${tobuild[@]}; do
-        D=$(basename "$dir")
+        # D=$(basename "$dir")
         # skip if dir is a dependency
-        if [[ " ${dependencies[@]} " =~ "{$D}" ]]; then
-            echo "Skipping $D as it is a dependency"
+        if [[ " ${dependencies[@]} " =~ "$dir" ]]; then
+            echo "Skipping $dir as it is a dependency"
             continue
         fi
         # if "skip-build" file exists, skip building
@@ -59,7 +73,7 @@ build_only() {
         fi
         FULL_CONTAINER_IMAGE_URL="$REPO$dir:$TAG"
         echo "Building $FULL_CONTAINER_IMAGE_URL"
-        sudo docker-buildx build --quiet                        \
+        docker-buildx build --quiet                             \
                           --build-arg BASE_REPO=$REPO           \
                           --build-arg BASE_IMAGE=mentored-base  \
                           --build-arg BASE_IMAGE_TAG=$TAG       \
