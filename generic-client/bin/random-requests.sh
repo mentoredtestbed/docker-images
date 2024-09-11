@@ -15,5 +15,5 @@ else
 fi
 
 mentored-registry-action -a client-request -o /app/results/ -n "Starting random requests to $TARGET"
-python3 /client_web_metrics.py -smin $MIN_RANDOM -smax $MAX_RANDOM --server_ip $TARGET -o /app/results/
+python3 /client_web_metrics.py -smin $MIN_RANDOM -smax $MAX_RANDOM --server_ip $TARGET -o /app/results/ $ADDITIONAL_FLAGS
 tail -f /dev/null

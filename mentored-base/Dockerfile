@@ -9,13 +9,11 @@ RUN apt-get -qq -y update && \
     nano vim curl net-tools iproute2 \
     python3 python3-pip nano \
     iputils-ping iputils-arping iputils-tracepath \
-    nmap
+    nmap at less
 
-RUN pip3 install --upgrade setuptools
-RUN pip3 install --upgrade pip
-RUN pip3 install icmplib==3.0.4
-RUN pip3 install pyaml==24.7.0
-RUN pip3 install psutil==6.0.0
+RUN pip3 install --upgrade setuptools pip
+RUN ls
+RUN pip3 install --break-system-packages icmplib==3.0.4 pyaml==24.7.0 psutil==6.0.0
 
 COPY ./entry.sh /
 COPY ./create_env_from_mentored_ip_list.py /
