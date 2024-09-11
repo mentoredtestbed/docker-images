@@ -22,12 +22,8 @@ if [ -z "$REPO" ] || [ -z "$TAG" ]; then
     exit 1
 fi
 
-# Build and push all directories in the dependencies array
-# Build dependencies first
-# echo dependencies
-echo "Building depedencies: ${dependencies[@]}"
-for dir in "${dependencies[@]}"; do
-    FULL_CONTAINER_IMAGE_URL="$REPO$dir:$TAG"
+build_single() {
+    FULL_CONTAINER_IMAGE_URL="$REPO$1:$TAG"
     echo "Building $FULL_CONTAINER_IMAGE_URL"
     docker-buildx build                                     \
                       --build-arg BASE_REPO=$REPO           \
@@ -35,12 +31,20 @@ for dir in "${dependencies[@]}"; do
                       --build-arg BASE_IMAGE_TAG=$TAG       \
                       -t $FULL_CONTAINER_IMAGE_URL          \
                       --platform linux/amd64,linux/arm64    \
-                      --push $dir ; # or use '\$dir'" &; here to do it in parallel
+                      --push $1
     # Exit if previous command failed
     if [ $? -ne 0 ]; then
         exit 1
     fi
     echo "Built $FULL_CONTAINER_IMAGE_URL"
+}
+
+# Build and push all directories in the dependencies array
+# Build dependencies first
+# echo dependencies
+echo "Building depedencies: ${dependencies[@]}"
+for dir in "${dependencies[@]}"; do
+    build_single $dir
 done
 echo "Finished building dependencies"
 
@@ -71,20 +75,7 @@ build_only() {
             echo "Skipping $dir as it has a .skip-image-build file"
             continue
         fi
-        FULL_CONTAINER_IMAGE_URL="$REPO$dir:$TAG"
-        echo "Building $FULL_CONTAINER_IMAGE_URL"
-        docker-buildx build --quiet                             \
-                          --build-arg BASE_REPO=$REPO           \
-                          --build-arg BASE_IMAGE=mentored-base  \
-                          --build-arg BASE_IMAGE_TAG=$TAG       \
-                          -t $FULL_CONTAINER_IMAGE_URL          \
-                          --platform linux/amd64,linux/arm64    \
-                          --push $dir ; # or use '\$dir'" &; here to do it in parallel
-        # Exit if previous command failed
-        if [ $? -ne 0 ]; then
-            exit 1
-        fi
-        echo "Built $FULL_CONTAINER_IMAGE_URL"
+        build_single $dir
     done
 }
 
