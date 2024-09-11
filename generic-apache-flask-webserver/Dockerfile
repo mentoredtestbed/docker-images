@@ -4,7 +4,10 @@
 ############################################################
 
 # Set the base image
-FROM ghcr.io/mentoredtestbed/mentored-base:latest
+ARG BASE_REPO=ghcr.io/mentoredtestbed/
+ARG BASE_IMAGE=mentored-base
+ARG BASE_IMAGE_TAG=latest
+FROM $BASE_REPO$BASE_IMAGE:$BASE_IMAGE_TAG
 # File Author / Maintainer
 
 RUN apt-get update && apt-get install -y apache2 \
