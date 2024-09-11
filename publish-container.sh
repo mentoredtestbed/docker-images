@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# if debug is needed, uncomment the next line
+# set -x
+# Read from to-build.csv file to array
+IFS=, read -r -a tobuild < to-build.csv
+
+# Usage: sudo bash publish-container.sh ghcr.io/khalilsantana/ foo
+REPO=$1 # eg ghcr.io/mentoredtestbed/
+TAG=$2  # eg 0.0.1
+TOBUILD=$3 # eg --all
+
+dependencies=("mentored-base")
+
+# If not root, exit
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root"
+    exit 1
+fi
+
+if [ -z "$REPO" ] || [ -z "$TAG" ]; then
+    echo "Usage: $0 ghcr.io/mentoredtestbed/ your-tag"
+    exit 1
+fi
+
+# Build and push all directories in the dependencies array
+# Build dependencies first
+for D in "${dependencies[@]}"; do
+    docker-buildx build -t $REPO$D:$TAG --platform linux/amd64,linux/arm64 --push $D;
+    # Exit if previous command failed
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+done
+
+build_all() {
+    # Collect all buildable directories and call build_only on them
+    tobuild=()
+    for dir in */; do
+        # Strip the trailing slash from the directory name
+        D="${dir%/}"
+        tobuild+=("$D")
+    done
+    build_only
+}
+# Why does this not work?
+build_only() {
+    echo "Building ${tobuild[@]}..."
+    for dir in ${tobuild[@]}; do
+        D=$(basename "$dir")
+        # skip if dir is a dependency
+        if [[ " ${dependencies[@]} " =~ "{$D}" ]]; then
+            echo "Skipping $D as it is a dependency"
+            continue
+        fi
+        # if "skip-build" file exists, skip building
+        if [ -f "$dir/.skip-image-build" ]; then
+            echo "Skipping $dir as it has a .skip-image-build file"
+            continue
+        fi
+        FULL_CONTAINER_IMAGE_URL="$REPO$dir:$TAG"
+        echo "Building $FULL_CONTAINER_IMAGE_URL"
+        sudo docker-buildx build --quiet                        \
+                          --build-arg BASE_REPO=$REPO           \
+                          --build-arg BASE_IMAGE=mentored-base  \
+                          --build-arg BASE_IMAGE_TAG=$TAG       \
+                          -t $FULL_CONTAINER_IMAGE_URL          \
+                          --platform linux/amd64,linux/arm64    \
+                          --push $dir ; # or use '\$dir'" &; here to do it in parallel
+        # Exit if previous command failed
+        if [ $? -ne 0 ]; then
+            exit 1
+        fi
+        echo "Built $FULL_CONTAINER_IMAGE_URL"
+    done
+}
+
+# if --all build all containers, else build only the ones in the to-build.csv file
+if [ "$3" == "--all" ]; then
+    build_all
+else
+    build_only
+fi
