@@ -17,7 +17,10 @@ def get_ip_for_each_interface():
                 ip_addresses[interface] = addr.address
     return ip_addresses
 
-def add_registry(action_name, output, notes):
+def add_registry(action_name, output, notes, source_ports, destination_ports, target):
+    """
+    Add an entry to the registry
+    """
     # Ensure that directory exists (recursive)
     os.makedirs(os.path.dirname(output), exist_ok=True)
     # if the output is a directory, append the file name
@@ -48,6 +51,9 @@ def add_registry(action_name, output, notes):
         "timestamp_as_int": timestamp_as_int,
         "timestamp_as_float": timestamp_as_float,
         "ip_list": ip_list,
+        "source_ports": source_ports,
+        "destination_ports": destination_ports,
+        "target": target
     })
 
     with open(output, "w") as file:
@@ -58,11 +64,18 @@ if __name__ == "__main__":
     args = argparse.ArgumentParser()
     args.add_argument("-a", "--action_name", help="Action name", default="debug")
     args.add_argument("-o", "--output", help="Output file", default="/MENTORED_REGISTRY")
-    args.add_argument("-n", "--notes", help="Notes", default="")
+    args.add_argument("-t", "--target", help="Target IP", default="")
+    args.add_argument("-sp", "--source_ports", help="Ports", default=[], nargs='+')
+    args.add_argument("-dp", "--destination_ports", help="Ports", default=[], nargs='+')
+    args.add_argument("-n", "--notes", help="Notes (can be a phrase)", default="", type=str)
+
     args = args.parse_args()
 
     action_name = args.action_name
     output = args.output
     notes = args.notes
+    source_ports = args.source_ports
+    destination_ports = args.destination_ports
+    target = args.target
 
-    add_registry(action_name, output, notes)
+    add_registry(action_name, output, notes, source_ports, destination_ports, target)

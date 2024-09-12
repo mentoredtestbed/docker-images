@@ -1,4 +1,4 @@
-FROM ghcr.io/mentoredtestbed/mentored-base:latest
+FROM ghcr.io/mentoredtestbed/generic-botnet:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -10,16 +10,14 @@ RUN apt -y install ssh-client
 RUN apt -y install hydra
 RUN apt -y install sshpass ssh
 
-RUN pip3 install --upgrade setuptools
-RUN pip3 install --upgrade pip
-RUN pip3 install --upgrade distlib
-RUN pip3 install psutil
+RUN pip3 install --break-system-packages distlib psutil pyaml==24.7.0 icmplib slowloris
 
 WORKDIR ./app
 
 COPY ./attacker.sh /app
 COPY ./vulnerable.sh /app
 COPY ./10000_common_passwords /app
+COPY ./10_common_passwords /app
 COPY ./attacker.py /app
 
 #ENTRYPOINT ["tcpdump", "-i", "eth0", "-w", "pcap_server.pcap"]

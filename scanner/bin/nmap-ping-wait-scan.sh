@@ -18,6 +18,13 @@ else
     wait_time=$3
 fi
 
+if [ -z "$4" ]
+then
+    attack_time=300
+else
+    attack_time=$4
+fi
+
 echo "Executing nmap nmap-ping-wait-scan.sh with target=$target, iname=$iname, wait_time=$wait_time"
 
 echo "Running simple ping scan..."
@@ -35,7 +42,8 @@ mentored-attack nmap $target $iname -Pn -O --send-ip -v &> /app/results/full-sca
 mentored-registry-action -a end-scan-attack-nmap -o /app/results/ -n "Stopping full scan to $target"
 
 echo "Running full scan using nikto..."
-mentored-attack nikto $target $iname -output /app/results/nikto-report.txt &> /app/results/nikto-scan.txt
-mentored-registry-action -a end-scan-attack-nikto -o /app/results/ -n "Stopping nikto scan to $target"
+# mentored-attack nikto $target $iname -output /app/results/nikto-report.txt &> /app/results/nikto-scan.txt
+# mentored-registry-action -a end-scan-attack-nikto -o /app/results/ -n "Stopping nikto scan to $target"
+mentored-attack nikto $target $iname $total_time -output /app/results/nikto-report.txt &> /app/results/nikto-scan.txt
 
 tail -f /dev/null

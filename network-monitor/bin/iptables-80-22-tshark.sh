@@ -23,7 +23,7 @@ iptables -A INPUT -i net1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 ip6tables -A INPUT -i net1 -p icmpv6 -j ACCEPT
 
 mentored-registry-action -a tshark -o /app/results/ -n "Starting TShark for packet capture"
-tshark -i net1 -x -w /app/results/packets.pcap > /dev/null 2>&1
+tshark -i net1 -x -w /app/results/packets.pcapng 2>&1 > /dev/null
 
 # Keep container running
 tail -f /dev/null
