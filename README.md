@@ -3,6 +3,8 @@
 
 ## Building and pushing multiple images
 
-'''bash
-./utils/build_all.sh 0.1 --push --replace-latest
-'''
+```bash
+sudo ./publish-container.sh ghcr.io/mentoredtestbed/ latest --all
+```
+
+(Otherwise it will build only files in `to-build.csv`)

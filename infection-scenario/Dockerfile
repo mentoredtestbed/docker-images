@@ -1,5 +1,7 @@
-FROM ghcr.io/mentoredtestbed/generic-botnet:latest
-
+ARG BASE_REPO=ghcr.io/mentoredtestbed/
+# No base image is specified
+ARG BASE_IMAGE_TAG=latest
+FROM $BASE_REPO'generic-botnet':$BASE_IMAGE_TAG
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt update
