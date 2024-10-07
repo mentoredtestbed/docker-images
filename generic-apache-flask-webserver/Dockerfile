@@ -41,4 +41,4 @@ EXPOSE 80
 WORKDIR /var/www/apache-flask
 
 COPY ./entrypoint.sh /entrypoint.sh
-CMD /entrypoint.sh
+CMD ["/entrypoint.sh"]
