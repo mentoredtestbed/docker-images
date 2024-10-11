@@ -1,6 +1,6 @@
 FROM alpine
 
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 
 RUN apk add --no-cache wget
 
