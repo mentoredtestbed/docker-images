@@ -2,6 +2,7 @@
 #
 # read the data from the URL and print it
 #
+import sys
 import urllib.request
 import time
 import numpy as np
@@ -152,7 +153,8 @@ def start_requests(
                     f.write("{},ERROR:{}".format(time.time() - t_init_server, str(e)))
                     f.write("\n")
                     f.flush()
-
+        # Flush stdout
+        sys.stdout.flush()
         time.sleep(np.random.uniform(sleep_time_min, sleep_time_max))
 
 
