@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
 ENV LANG=C.UTF-8
 
@@ -11,8 +11,7 @@ RUN apt-get -qq -y update && \
     iputils-ping iputils-arping iputils-tracepath \
     nmap at less
 
-RUN pip3 install --upgrade setuptools pip
-RUN ls
+RUN pip3 install --upgrade setuptools pip --break-system-packages
 RUN pip3 install --break-system-packages icmplib==3.0.4 pyaml==24.7.0 psutil==6.0.0
 
 COPY ./entry.sh /
