@@ -4,7 +4,8 @@ mode=$1
 target=$2
 iname=$3
 total_time=$4
-attack_args=${@:5}
+port=$5
+attack_args=${@:6}
 
 if [ -z "$mode" ]
 then
@@ -42,20 +43,10 @@ then
     done
 elif [ "$mode" == "slowloris" ]
 then
-    port=80
-    # If -p is in the arguments list
-    if [[ " ${attack_args[@]} " =~ " -p " ]]
-    then
-        # Get the index of -p
-        index=$(echo ${attack_args[@]} | grep -o -b -P " -p " | cut -d: -f1)
-        # Get the port number
-        port=$(echo ${attack_args[@]:$index+1} | grep -o -P "\d+")
-    fi
-
     for ip in $target_list
     do
         mentored-registry-action "${registry_base[@]}" --destination_ports $port -t $ip
-        timeout $total_time slowloris $attack_args $ip
+        timeout $total_time slowloris $attack_args -p $port $ip
         mentored-registry-action "${registry_base_end[@]}" -t $ip
     done
 elif [ "$mode" == "nikto" ]
@@ -99,19 +90,10 @@ then
 #     done
 elif [ "$mode" == "hping3" ]
 then
-    port=80
-    # If -p is in the arguments list
-    if [[ " ${attack_args[@]} " =~ " -p " ]]
-    then
-        # Get the index of -p
-        index=$(echo ${attack_args[@]} | grep -o -b -P " -p " | cut -d: -f1)
-        # Get the port number
-        port=$(echo ${attack_args[@]:$index+1} | grep -o -P "\d+")
-    fi
     for ip in $target_list
     do
         mentored-registry-action "${registry_base[@]}" --destination_ports $port -t $ip
-        timeout $total_time hping3 $attack_args $ip
+        timeout $total_time hping3 $attack_args -p $port $ip
         mentored-registry-action "${registry_base_end[@]}" -t $ip
     done
 # elif [ "$mode" == "nemesis" ]
