@@ -17,6 +17,14 @@ EGRESS_KBS="${EGRESS_KBS:-99999999}"
 
 ADD_SERVER_IP_TO_COMMAND="${ADD_SERVER_IP_TO_COMMAND:-no}"
 
+if [ -z "$SERVER_NA_NAME" ]; then
+    echo "SERVER_NA_NAME is not set, defaulting to na-server for compatibility"
+    SERVER_NA_NAME="na-server"
+else
+    SERVER_NA_NAME="${SERVER_NA_NAME}"
+    echo "SERVER_NA_NAME is set to $SERVER_NA_NAME"
+fi
+
 # wondershaper $NET_INTERFACE $INGRESS_KBS $EGRESS_KBS
 
 # Macvlan mtu configuration
@@ -33,7 +41,7 @@ sleep 1
 if [[ -f "/MENTORED_IP_LIST.json" ]]
 then
     #TODO: Dynamic Node Actor name, interface name, and var NAME
-    python3 /create_env_from_mentored_ip_list.py /MENTORED_IP_LIST.json na-server $MENTORED_EXP_IFNAME SERVER /MENTORED_ENV.source
+    python3 /create_env_from_mentored_ip_list.py /MENTORED_IP_LIST.json $SERVER_NA_NAME $MENTORED_EXP_IFNAME SERVER /MENTORED_ENV.source
 
     # If MENTORED_ENV was not created, then create it
     if [ ! -f /MENTORED_ENV.source ]; then
