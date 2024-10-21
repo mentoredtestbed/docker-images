@@ -9,7 +9,7 @@ RUN bash -c "pushd /opt/rapidresetclient && go build -o /usr/local/bin/rapidrese
 
 FROM $BASE_REPO$BASE_IMAGE:$BASE_IMAGE_TAG
 
-RUN echo "deb http://ftp.de.debian.org/debian bookworm main non-free" >> /etc/apt/sources.list
+RUN echo "deb http://ftp.debian.org/debian bookworm main non-free" >> /etc/apt/sources.list
 
 RUN apt-get update && apt-get install -y nikto
 
