@@ -28,7 +28,7 @@ fi
 # wondershaper $NET_INTERFACE $INGRESS_KBS $EGRESS_KBS
 
 # Macvlan mtu configuration
-ifconfig net1 mtu 1000 up
+ifconfig net1 mtu 1280 up
 
 while [ ! -f /MENTORED_READY ];
 do
