@@ -3,31 +3,44 @@ import argparse
 import os
 import time
 import random
+import logging
 import paho.mqtt.client as mqtt
+
+def setup_logger(log_file):
+    # Make sure the path to that log file exists
+    # Ensure the log directory exists
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
 
 def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior):
     # Callback when the client connects to the broker
     def on_connect(client, userdata, flags, rc):
-        print(f"Connected with result code {rc}")
+        message = f"Connected with result code {rc}"
+        print(message)
+        logging.info(message)
         if rc == 0:  # Successful connection
             if mqtt_config["MQTT_MODE"] == "sub":
-                mqtt_topic = mqtt_config["MQTT_TOPIC"];
+                mqtt_topic = mqtt_config["MQTT_TOPIC"]
                 client.subscribe(mqtt_topic, qos=0)
-                print(f"Subscribed to {mqtt_topic}")
+                logging.info(f"Subscribed to {mqtt_topic}")
         else:
-            print(f"Connection failed with result code {rc}")
+            logging.error(f"Connection failed with result code {rc}")
 
     # Callback when a message is published
     def on_publish(client, userdata, mid):
-        print(f"Message {mid} published")
+        logging.info(f"Message {mid} published")
 
     # Callback when a message is received
     def on_message(client, userdata, message):
-        print(f"Received message: '{message.payload.decode()}' on topic: '{message.topic}'")
+        logging.info(f"Received message: '{message.payload.decode()}' on topic: '{message.topic}'")
 
     # Callback when the client disconnects
     def on_disconnect(client, userdata, rc):
-        print(f"Disconnected with result code {rc}")
+        logging.info(f"Disconnected with result code {rc}")
 
     # Initialize the MQTT client
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, mqtt_client_id)
@@ -37,9 +50,11 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior):
     client.on_publish = on_publish
     client.on_message = on_message
     client.on_disconnect = on_disconnect
+
     # Connect to the MQTT broker
-    print(f"Connecting to {mqtt_config['MQTT_BROKER']}:{mqtt_config['MQTT_PORT']}")
+    logging.info(f"Connecting to {mqtt_config['MQTT_BROKER']}:{mqtt_config['MQTT_PORT']}")
     client.connect(mqtt_config["MQTT_BROKER"], mqtt_config["MQTT_PORT"], 60)
+
     # Publisher mode
     if mqtt_config["MQTT_MODE"] == "pub":
         client.loop_start()  # Start the loop in a background thread
@@ -47,13 +62,11 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior):
             while True:
                 random_data = random.randint(1, 100)
                 client.publish(mqtt_config["MQTT_TOPIC"], payload=random_data, qos=0)
-                print(f"Sent data: {random_data}")
-                sleep_time_in_seconds = sleep_time_max
-                if not static_behavior:
-                    sleep_time_in_seconds = random.uniform(sleep_time_min, sleep_time_max)
+                logging.info(f"Sent data: {random_data}")
+                sleep_time_in_seconds = sleep_time_max if static_behavior else random.uniform(sleep_time_min, sleep_time_max)
                 time.sleep(sleep_time_in_seconds)
         except KeyboardInterrupt:
-            print("Publisher stopped by user")
+            logging.info("Publisher stopped by user")
         finally:
             client.loop_stop()
             client.disconnect()
@@ -61,7 +74,6 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior):
     # Subscriber mode
     elif mqtt_config["MQTT_MODE"] == "sub":
         client.loop_forever()  # Block and wait for messages
-
 
 if __name__ == "__main__":
 
@@ -73,37 +85,21 @@ if __name__ == "__main__":
     args.add_argument("-t", "--topic", help="MQTT topic", default=None, type=str)
     args.add_argument("-m", "--mode", help="MQTT mode (pub/sub)", default=None, type=str)
     args.add_argument("-c", "--client_id", help="MQTT client ID", default=None, type=str)
-    # args.add_argument("-o", "--output", help="Output file", default="/client_delay.csv")
-    # args.add_argument("-s", "--silent", help="Silent mode", action="store_true")
-
-    # Store true
+    args.add_argument("-o", "--output", help="Output log file", default="mqtt_client_log.txt", type=str)
     args.add_argument('--static_behavior', action='store_true', help='Static behavior (no randomization)')
-
     args = args.parse_args()
+
+    setup_logger(args.output)
 
     sleep_time_min = args.sleep_time_min
     sleep_time_max = args.sleep_time_max
     static_behavior = args.static_behavior
 
     # Also allow environment variables
-    mqtt_broker = args.server_ip
-    if mqtt_broker is None:
-        mqtt_broker = os.getenv('MQTT_BROKER', 'localhost')
-    
-    mqtt_client_id = args.client_id
-    if mqtt_client_id is None:
-        mqtt_client_id = os.getenv('MQTT_CLIENT_ID', None)
-        if mqtt_client_id is None:
-            hostname = os.getenv('HOSTNAME')
-            mqtt_client_id = hostname
-    
-    mqtt_topic = args.topic
-    if mqtt_topic is None:
-        mqtt_topic = os.getenv('MQTT_TOPIC', 'mentored/topic')
-    
-    mqtt_mode = args.mode
-    if mqtt_mode is None:
-        mqtt_mode = os.getenv('MQTT_MODE', 'pub')
+    mqtt_broker = args.server_ip or os.getenv('MQTT_BROKER', 'localhost')
+    mqtt_client_id = args.client_id or os.getenv('MQTT_CLIENT_ID') or os.getenv('HOSTNAME')
+    mqtt_topic = args.topic or os.getenv('MQTT_TOPIC', 'mentored/topic')
+    mqtt_mode = args.mode or os.getenv('MQTT_MODE', 'pub')
 
     mqtt_config = {
         "MQTT_BROKER": mqtt_broker,
@@ -113,6 +109,5 @@ if __name__ == "__main__":
         "MQTT_CLIENT_ID": mqtt_client_id
     }
 
-    print(f"Using MQTT broker: {mqtt_broker}:{args.port} using mode {mqtt_mode} topic: {mqtt_topic}")
+    logging.info(f"Starting client with broker: {mqtt_broker}:{args.port}, mode: {mqtt_mode}, topic: {mqtt_topic}")
     main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior)
-    
