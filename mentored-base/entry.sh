@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 # Set MENTORED_EXP_IFNAME env variable default value as net1
 MENTORED_EXP_IFNAME="${MENTORED_EXP_IFNAME:-net1}"
 
