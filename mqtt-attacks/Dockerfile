@@ -1,6 +1,6 @@
 ARG BASE_REPO=ghcr.io/mentoredtestbed/
 ARG BASE_IMAGE_TAG=latest
-FROM ${BASE_REPO}"generic-botnet":${BASE_IMAGE_TAG}
+FROM ${BASE_REPO}"infection-scenario":${BASE_IMAGE_TAG}
 
 # Install mosquitto
 RUN apt-get update && apt install -y tshark
