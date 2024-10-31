@@ -91,7 +91,15 @@ if [ "$TIMEOUT_CMD" -gt 0 ]; then
     CMD="$@ $CMD_SUFFIX"
     echo "$CMD"
     timeout $TIMEOUT_CMD $CMD
-    tail -f /dev/null
 else
     eval "$@ $CMD_SUFFIX"
+fi
+
+# if KILL_POD_AFTER_COMMAND is not set or set to false then sleep infinity
+if [ -z "$KILL_POD_AFTER_COMMAND" ] || [ "$KILL_POD_AFTER_COMMAND" == "false" ]; then
+    echo "KILL_POD_AFTER_COMMAND is not set or set to false, sleeping forever to keep container alive"
+    sleep infinity
+else
+    echo "KILL_POD_AFTER_COMMAND is set to true, exiting"
+    exit 0
 fi
