@@ -43,6 +43,17 @@ then
     #TODO: Dynamic Node Actor name, interface name, and var NAME
     python3 /create_env_from_mentored_ip_list.py /MENTORED_IP_LIST.json $SERVER_NA_NAME $MENTORED_EXP_IFNAME SERVER /MENTORED_ENV.source
 
+    # if "MENTORED_DNS" is unset, or set to "/etc/hosts" then setup /etc/hosts
+    if [ -z "$MENTORED_DNS" ] || [ "$MENTORED_DNS" == "/etc/hosts" ]; then
+        echo "MENTORED_DNS is not set or set to /etc/hosts, setting up /etc/hosts"
+        setup_etc_hosts.py
+    elif [ "$MENTORED_DNS" == "pod-dns" ]; then
+        echo "MENTORED_DNS is set to pod-dns, using MENTORED_DNS_NA as the DNS server..."
+        use_na_as_dns_server.py $MENTORED_DNS_NA
+    else
+        echo "MENTORED_DNS is set to $MENTORED_DNS, which is not implemented yet, skipping..."
+    fi
+
     # If MENTORED_ENV was not created, then create it
     if [ ! -f /MENTORED_ENV.source ]; then
         touch /MENTORED_ENV.source
