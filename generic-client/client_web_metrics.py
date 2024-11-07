@@ -2,6 +2,7 @@
 #
 # read the data from the URL and print it
 #
+import sys
 import urllib.request
 import time
 import numpy as np
@@ -118,23 +119,42 @@ def start_requests(
 
         if not silent:
             print(f"GET {route}")
-        req = urllib.request.Request(route, headers=headers)
-        webUrl = urllib.request.urlopen(req)
+        
+        try:
+            req = urllib.request.Request(route, headers=headers)
+            webUrl = urllib.request.urlopen(req)
+            data = webUrl.read()
+            time_delay = time.time() - t_init
 
-        data = webUrl.read()
-        time_delay = time.time() - t_init
-
-        stat = "{},{:.3f}".format(
+            stat = "{},{:.3f}".format(
                 time.time() - t_init_server,
                 time_delay)
 
-        if not silent:
-            print(stat)
+            if not silent:
+                print(stat)
 
-        with open(output, 'a') as f:
-            f.write(stat)
-            f.write("\n")
+            with open(output, 'a') as f:
+                f.write(stat)
+                f.write("\n")
+                f.flush()
 
+        except urllib.error.URLError as e:
+            if not silent:
+                print(f"Failed to reach the server: {e.reason}")
+                with open(output, 'a') as f:
+                    f.write("{},ERROR:{}".format(time.time() - t_init_server, e.reason))
+                    f.write("\n")
+                    f.flush()
+
+        except Exception as e:
+            if not silent:
+                print(f"An error occurred: {e}")
+                with open(output, 'a') as f:
+                    f.write("{},ERROR:{}".format(time.time() - t_init_server, str(e)))
+                    f.write("\n")
+                    f.flush()
+        # Flush stdout
+        sys.stdout.flush()
         time.sleep(np.random.uniform(sleep_time_min, sleep_time_max))
 
 
