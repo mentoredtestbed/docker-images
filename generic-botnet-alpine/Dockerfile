@@ -12,7 +12,7 @@ RUN /slowhttptest/configure && make
 
 FROM alpine:3.9
 
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 
 # RUN apk add --no-cache \
 #     t50 hping3 slowhttptest wondershaper

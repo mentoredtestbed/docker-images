@@ -32,7 +32,7 @@ RUN a2ensite apache-flask.conf
 RUN a2enmod headers
 
 # Create a ENV APACHE_LOG_DIR to store the logs
-ENV APACHE_LOG_DIR /app/results
+ENV APACHE_LOG_DIR=/app/results
 
 RUN mkdir -p /app/results
 
@@ -41,4 +41,4 @@ EXPOSE 80
 WORKDIR /var/www/apache-flask
 
 COPY ./entrypoint.sh /entrypoint.sh
-CMD /entrypoint.sh
+CMD ["/entrypoint.sh"]

@@ -1,6 +1,6 @@
 FROM debian:stable
 
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 
 RUN apt-get -qq -y update && \
     apt-get -qq -y install \

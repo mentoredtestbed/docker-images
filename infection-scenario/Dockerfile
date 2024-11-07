@@ -14,7 +14,7 @@ RUN apt -y install sshpass ssh
 
 RUN pip3 install --break-system-packages distlib psutil pyaml==24.7.0 icmplib slowloris
 
-WORKDIR ./app
+WORKDIR /app
 
 COPY ./attacker.sh /app
 COPY ./vulnerable.sh /app
