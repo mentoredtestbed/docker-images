@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-import urllib.request
 import time
 import numpy as np
 import argparse
@@ -101,7 +100,7 @@ def start_requests(
 
     t_init_server = time.time()
 
-    client = httpx.Client(http2=http2, verify=not ignore_tls) if http2 else None
+    client = httpx.Client(http2=http2, verify=not ignore_tls)
 
     schema = "http://"
 
@@ -127,13 +126,8 @@ def start_requests(
             print(f"GET {route}")
 
         try:
-            if http2:
-                response = client.get(route, headers=headers)
-                data = response.text
-            else:
-                req = urllib.request.Request(route, headers=headers)
-                webUrl = urllib.request.urlopen(req)
-                data = webUrl.read()
+            response = client.get(route, headers=headers)
+            data = response.text
 
             time_delay = time.time() - t_init
 
@@ -148,14 +142,6 @@ def start_requests(
                 f.write(stat)
                 f.write("\n")
                 f.flush()
-
-        except urllib.error.URLError as e:
-            if not silent:
-                print(f"Failed to reach the server: {e.reason}")
-                with open(output, 'a') as f:
-                    f.write("{},ERROR:{}".format(time.time() - t_init_server, e.reason))
-                    f.write("\n")
-                    f.flush()
 
         except Exception as e:
             if not silent:
@@ -175,7 +161,7 @@ if __name__ == "__main__":
     args.add_argument("-o", "--output", help="Output file", default="/client_delay.csv")
     args.add_argument("-s", "--silent", help="Silent mode", action="store_true")
     args.add_argument('--static_behavior', action='store_true', help='Static behavior (no randomization)')
-    args.add_argument("--http2", action="store_true", help="Enable HTTP/2 support")
+    args.add_argument("--http2", action="store_true", help="Enable HTTP/2 support", default=False)
     args.add_argument("--ignore-tls", action="store_true", help="Ignore TLS certificate validation")
 
     args = args.parse_args()
