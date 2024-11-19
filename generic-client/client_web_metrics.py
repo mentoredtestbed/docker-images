@@ -1,13 +1,11 @@
 #!/usr/bin/python3
-#
-# read the data from the URL and print it
-#
 import urllib.request
 import time
 import numpy as np
 import argparse
 import os
 import random
+import httpx  # Add httpx for HTTP/2 support
 
 agents = [
     'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko)',
@@ -87,7 +85,10 @@ def start_requests(
         server_ip,
         output,
         silent,
-        static_behavior):
+        static_behavior,
+        http2=False,
+        ignore_tls=False
+        ):
     # Ensure that directory exists (recursive)
     os.makedirs(os.path.dirname(output), exist_ok=True)
     # if the output is a directory, append the file name
@@ -100,29 +101,40 @@ def start_requests(
 
     t_init_server = time.time()
 
+    client = httpx.Client(http2=http2, verify=not ignore_tls) if http2 else None
+
+    schema = "http://"
+
+    if http2: # Most servers use HTTPS for HTTP/2
+        schema = "https://"
+
     while True:
         t_init = time.time()
         get_params = {}
 
         if not static_behavior:
             random_route, expected_size = create_random_route()
-            route = f'http://{server_ip}' + random_route
+            route = f'{schema}{server_ip}' + random_route
             if random.random() > 0.5:
                 get_params['min_words'] = 1
                 # Exponential probability considering max = 2**30 (1 GB)
                 get_params['max_words'] = int(expected_size)
                 route += "?" + "&".join([f"{k}={v}" for k, v in get_params.items()])
         else:
-            route = f'http://{server_ip}/'
-
+            route = f'{schema}{server_ip}/'
 
         if not silent:
             print(f"GET {route}")
-        
+
         try:
-            req = urllib.request.Request(route, headers=headers)
-            webUrl = urllib.request.urlopen(req)
-            data = webUrl.read()
+            if http2:
+                response = client.get(route, headers=headers)
+                data = response.text
+            else:
+                req = urllib.request.Request(route, headers=headers)
+                webUrl = urllib.request.urlopen(req)
+                data = webUrl.read()
+
             time_delay = time.time() - t_init
 
             stat = "{},{:.3f}".format(
@@ -155,32 +167,26 @@ def start_requests(
 
         time.sleep(np.random.uniform(sleep_time_min, sleep_time_max))
 
-
 if __name__ == "__main__":
-
     args = argparse.ArgumentParser()
     args.add_argument("-smin", "--sleep_time_min", help="Minimum sleep time", default=0.1, type=float)
     args.add_argument("-smax", "--sleep_time_max", help="Maximum sleep time", default=0.5, type=float)
     args.add_argument("-ip", "--server_ip", help="Server IP", default="localhost", type=str)
     args.add_argument("-o", "--output", help="Output file", default="/client_delay.csv")
     args.add_argument("-s", "--silent", help="Silent mode", action="store_true")
-
-    # Store true
     args.add_argument('--static_behavior', action='store_true', help='Static behavior (no randomization)')
+    args.add_argument("--http2", action="store_true", help="Enable HTTP/2 support")
+    args.add_argument("--ignore-tls", action="store_true", help="Ignore TLS certificate validation")
 
     args = args.parse_args()
 
-    sleep_time_min = args.sleep_time_min
-    sleep_time_max = args.sleep_time_max
-    server_ip = args.server_ip
-    output = args.output
-    silent = args.silent
-    static_behavior = args.static_behavior
-
     start_requests(
-        sleep_time_min,
-        sleep_time_max,
-        server_ip,
-        output,
-        silent,
-        static_behavior)
+        args.sleep_time_min,
+        args.sleep_time_max,
+        args.server_ip,
+        args.output,
+        args.silent,
+        args.static_behavior,
+        args.http2,
+        args.ignore_tls
+    )
