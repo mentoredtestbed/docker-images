@@ -41,6 +41,8 @@ COPY --from=builder /etc/ssl/private/server.key /etc/ssl/private/
 # Create the Nginx config for SSL
 RUN mkdir -p /etc/nginx/conf.d
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.reverseproxy.conf /etc/nginx/nginx.reverseproxy.conf.disabled
+COPY setup-reverse-proxy.sh /usr/local/bin/setup-reverse-proxy.sh
 
 # Expose HTTPS port
 EXPOSE 443
