@@ -36,6 +36,14 @@ else
 fi
 ifconfig net1 mtu $MENTORED_MTU up
 
+
+# if MENTORED_PRE_CMD is set, then execute it in the background
+if [ -n "$MENTORED_PRE_CMD" ]; then
+    echo "MENTORED_PRE_CMD is set, executing it in the background"
+    eval "$MENTORED_PRE_CMD" &
+fi
+
+
 while [ ! -f /MENTORED_READY ];
 do
 sleep 1;
