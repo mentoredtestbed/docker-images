@@ -11,7 +11,13 @@ INAME="${INAME:-net1}"
 if [ -n "$NA_TARGET" ]; then
     TARGET=$(mentored-get-ip --na-regex $NA_TARGET --iname $INAME)
 else
-    TARGET=$1
+    arg1=$1
+    if [ -n "$arg1" ]; then
+        TARGET=$arg1
+    else
+        echo "Using $SERVER_NA_NAME as target"
+        TARGET=$SERVER_NA_NAME
+    fi
 fi
 
 mentored-registry-action -a client-request -o /app/results/ -n "Starting random requests to $TARGET"
