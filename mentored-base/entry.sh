@@ -30,7 +30,7 @@ fi
 # Macvlan mtu configuration
 if [ -z "$MENTORED_MTU" ]; then
     echo "MENTORED_MTU is not set, defaulting to 1280"
-    MENTORED_MTU=1280 # Minimum MTU for IPv6
+    MENTORED_MTU=1000
 else
     echo "MENTORED_MTU is set to $MENTORED_MTU"
 fi
