@@ -29,7 +29,7 @@ fi
 
 # Macvlan mtu configuration
 if [ -z "$MENTORED_MTU" ]; then
-    echo "MENTORED_MTU is not set, defaulting to 1280"
+    echo "MENTORED_MTU is not set, defaulting to 1000"
     MENTORED_MTU=1000
 else
     echo "MENTORED_MTU is set to $MENTORED_MTU"
