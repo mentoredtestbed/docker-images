@@ -111,8 +111,10 @@ then
     do
         mentored-registry-action "${registry_base[@]}" --destination_ports $port -t $ip
         pushd /usr/local/bin/mqttsa
-        timeout $total_time python3 mqttsa.py $attack_args $ip -p $port | tee /app/results/mqttsa_$ip.log
-        mv *.pdf /app/results/
+        # TODO save the attack output to a file, doing stdout redirects doesn't work here though
+        timeout $total_time python3 mqttsa.py $attack_args $ip -p $port
+        # TODO: save the report to the results folder, not currently workinf for some reason
+        # mv *.pdf /app/results/
         popd
         mentored-registry-action "${registry_base_end[@]}" -t $ip
     done
