@@ -1,1 +1,1 @@
-generic-botnet,infection-scenario,nginx-simple,network-monitor,generic-client,generic-apache-flask-webserver,mqtt-simple,mqtt-attacks,ip_camera,rstp_stream_server,mentored-dnsmasq
+generic-botnet,infection-scenario,nginx-simple,nginx-simple-ssl,network-monitor,generic-client,mqtt-simple,mqtt-attacks,ip_camera,rstp_stream_server,mentored-dnsmasq
