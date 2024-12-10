@@ -6,62 +6,54 @@ import random
 import logging
 import paho.mqtt.client as mqtt
 
-def setup_logger(log_file):
-    # Ensure the log directory exists
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+def setup_loggers(main_log_file, mqtt_log_file):
+    # Ensure the log directories exist
+    os.makedirs(os.path.dirname(main_log_file), exist_ok=True)
 
-    # Configure main logger
-    logging.basicConfig(
-        filename=log_file,
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+    # Configure the main application logger
+    main_logger = logging.getLogger("main")
+    main_logger.setLevel(logging.INFO)
+    main_handler = logging.FileHandler(main_log_file)
+    main_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
+    main_logger.addHandler(main_handler)
 
-    # Create a separate file for MQTT messages
-    mqtt_log_file = log_file.replace(".txt", "_mqtt.csv")
+    # Configure the MQTT logger
     mqtt_logger = logging.getLogger("mqtt")
     mqtt_logger.setLevel(logging.INFO)
-
     mqtt_handler = logging.FileHandler(mqtt_log_file)
     mqtt_handler.setFormatter(logging.Formatter("%(message)s"))
     mqtt_logger.addHandler(mqtt_handler)
 
-    # Add a CSV header to the MQTT-specific log
-    if not os.path.exists(mqtt_log_file):
+    # Add a CSV header to the MQTT log file if it's empty
+    if not os.path.exists(mqtt_log_file) or os.stat(mqtt_log_file).st_size == 0:
         with open(mqtt_log_file, 'w') as f:
             f.write("time,topic,message,action\n")
-    
-    return mqtt_logger
 
+    return main_logger, mqtt_logger
 
-def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, mqtt_logger=None):
-    # Initialize MQTT logger
-    if mqtt_logger is None:
-        mqtt_logger = logging.getLogger("mqtt")
-
+def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main_logger, mqtt_logger):
     def on_connect(client, userdata, flags, rc):
         message = f"Connected with result code {rc}"
         print(message)
-        logging.info(message)
+        main_logger.info(message)
         if rc == 0:  # Successful connection
             if mqtt_config["MQTT_MODE"] == "sub":
                 mqtt_topic = mqtt_config["MQTT_TOPIC"]
                 client.subscribe(mqtt_topic, qos=0)
-                logging.info(f"Subscribed to {mqtt_topic}")
+                main_logger.info(f"Subscribed to {mqtt_topic}")
         else:
-            logging.error(f"Connection failed with result code {rc}")
+            main_logger.error(f"Connection failed with result code {rc}")
 
     def on_publish(client, userdata, mid):
-        logging.info(f"Message {mid} published")
+        main_logger.info(f"Message {mid} published")
         mqtt_logger.info(f"{time.time()},{mqtt_config['MQTT_TOPIC']},,published")
 
     def on_message(client, userdata, message):
-        logging.info(f"Received message: '{message.payload.decode()}' on topic: '{message.topic}'")
+        main_logger.info(f"Received message: '{message.payload.decode()}' on topic: '{message.topic}'")
         mqtt_logger.info(f"{time.time()},{message.topic},{message.payload.decode()},received")
 
     def on_disconnect(client, userdata, rc):
-        logging.info(f"Disconnected with result code {rc}")
+        main_logger.info(f"Disconnected with result code {rc}")
 
     # Initialize the MQTT client
     client = mqtt.Client(client_id=mqtt_config["MQTT_CLIENT_ID"])
@@ -73,7 +65,7 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, mqtt
     client.on_disconnect = on_disconnect
 
     # Connect to the MQTT broker
-    logging.info(f"Connecting to {mqtt_config['MQTT_BROKER']}:{mqtt_config['MQTT_PORT']}")
+    main_logger.info(f"Connecting to {mqtt_config['MQTT_BROKER']}:{mqtt_config['MQTT_PORT']}")
     client.connect(mqtt_config["MQTT_BROKER"], mqtt_config["MQTT_PORT"], 60)
 
     if mqtt_config["MQTT_MODE"] == "pub":
@@ -82,11 +74,11 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, mqtt
             while True:
                 random_data = random.randint(1, 100)
                 client.publish(mqtt_config["MQTT_TOPIC"], payload=random_data, qos=0)
-                logging.info(f"Sent data: {random_data}")
+                main_logger.info(f"Sent data: {random_data}")
                 sleep_time_in_seconds = sleep_time_max if static_behavior else random.uniform(sleep_time_min, sleep_time_max)
                 time.sleep(sleep_time_in_seconds)
         except KeyboardInterrupt:
-            logging.info("Publisher stopped by user")
+            main_logger.info("Publisher stopped by user")
         finally:
             client.loop_stop()
             client.disconnect()
@@ -107,7 +99,11 @@ if __name__ == "__main__":
     parser.add_argument('--static_behavior', action='store_true', help='Static behavior (no randomization)')
     args = parser.parse_args()
 
-    mqtt_logger = setup_logger(args.output)
+    main_log_file = args.output
+    # Replace the extension, whatever it is, with .csv
+    mqtt_log_file = os.path.splitext(main_log_file)[0] + ".csv"
+
+    main_logger, mqtt_logger = setup_loggers(main_log_file, mqtt_log_file)
 
     sleep_time_min = args.sleep_time_min
     sleep_time_max = args.sleep_time_max
@@ -126,5 +122,5 @@ if __name__ == "__main__":
         "MQTT_CLIENT_ID": mqtt_client_id
     }
 
-    logging.info(f"Starting client with broker: {mqtt_broker}:{args.port}, mode: {mqtt_mode}, topic: {mqtt_topic}")
-    main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, mqtt_logger=mqtt_logger)
+    main_logger.info(f"Starting client with broker: {mqtt_broker}:{args.port}, mode: {mqtt_mode}, topic: {mqtt_topic}")
+    main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main_logger, mqtt_logger)
