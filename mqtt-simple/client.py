@@ -56,7 +56,7 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main
         main_logger.info(f"Disconnected with result code {rc}")
 
     # Initialize the MQTT client
-    client = mqtt.Client(client_id=mqtt_config["MQTT_CLIENT_ID"])
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, mqtt_client_id)
 
     # Set callback functions
     client.on_connect = on_connect
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     static_behavior = args.static_behavior
 
     mqtt_broker = args.server_ip or os.getenv('MQTT_BROKER', 'localhost')
-    mqtt_client_id = args.client_id or os.getenv('MQTT_CLIENT_ID') or os.getenv('HOSTNAME', 'default_client')
+    mqtt_client_id = args.client_id or os.getenv('MQTT_CLIENT_ID') or os.getenv('HOSTNAME')
     mqtt_topic = args.topic or os.getenv('MQTT_TOPIC', 'mentored/topic')
     mqtt_mode = args.mode or os.getenv('MQTT_MODE', 'pub')
 
