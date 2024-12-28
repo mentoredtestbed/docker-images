@@ -5,6 +5,9 @@ import argparse
 import os
 import random
 import httpx  # Add httpx for HTTP/2 support
+import sys
+import netifaces as ni
+import json
 
 agents = [
     'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko)',
@@ -31,6 +34,26 @@ route_list = [
     '/api/v1',
     '/api/v1/data',
 ]
+
+def get_env_var(name, default):
+    return os.environ[name] if name in os.environ else default
+
+def my_ip():
+    # Get IP for interface name net1
+    return ni.ifaddresses('net1')[ni.AF_INET][0]['addr']
+    
+def get_replica_id():
+    my_name=os.environ.get('HOSTNAME', None)
+    # Open /MENTORED_IP_LIST.json file
+    with open('/MENTORED_IP_LIST.json') as f:
+        ip_list = json.load(f)
+
+        for actor in ip_list:
+            for replica_id, ip, mask, iname in enumerate(actor['ips']):
+                if ip == my_ip():
+                    return replica_id
+
+    return 0
 
 def create_random_route():
     # 15% chance of returning a static media file
@@ -101,7 +124,7 @@ def start_requests(
     t_init_server = time.time()
 
     client = httpx.Client(http2=http2, verify=not ignore_tls)
-
+    print(f"{time.time() - t_init_server:.3f} seconds to create client")
     schema = "http://"
 
     if http2: # Most servers use HTTPS for HTTP/2
@@ -110,7 +133,8 @@ def start_requests(
     while True:
         t_init = time.time()
         get_params = {}
-
+        
+        t_init_step = time.time()
         if not static_behavior:
             random_route, expected_size = create_random_route()
             route = f'{schema}{server_ip}' + random_route
@@ -121,19 +145,24 @@ def start_requests(
                 route += "?" + "&".join([f"{k}={v}" for k, v in get_params.items()])
         else:
             route = f'{schema}{server_ip}/'
+        print(f"{time.time() - t_init_step:.3f} seconds to generate route")
 
-        if not silent:
-            print(f"GET {route}")
+        # if not silent:
+        print(f"GET {route}")
 
         try:
+            t_init_step = time.time()
             response = client.get(route, headers=headers)
+            print(f"{time.time() - t_init_step:.3f} seconds to make request")
+            sys.stdout.flush()
             data = response.text
 
             time_delay = time.time() - t_init
 
-            stat = "{},{:.3f}".format(
+            stat = "{},{:.3f},{}".format(
                 time.time() - t_init_server,
-                time_delay)
+                time_delay,
+                t_init)
 
             if not silent:
                 print(stat)

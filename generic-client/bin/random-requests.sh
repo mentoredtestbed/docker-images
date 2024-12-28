@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 # Verify if env variables MIN_RANDOM and MAX_RANDOM are defined, otherwise set them to 1 and 10
 MIN_RANDOM="${MIN_RANDOM:-1}"
 MAX_RANDOM="${MAX_RANDOM:-10}"
