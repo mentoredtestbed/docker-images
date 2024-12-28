@@ -48,9 +48,14 @@ while [ ! -f /MENTORED_READY ];
 do
 sleep 1;
 done
-
+sync
 sleep 1
 
+mkdir -p /app/results
+cp /MENTORED_READY /app/results/MENTORED_READY
+cp /MENTORED_IP_LIST.json /app/results/MENTORED_IP_LIST.json
+cp /MENTORED_IP_LIST.yaml /app/results/MENTORED_IP_LIST.yaml
+cp /MENTORED_ENV.source /app/results/MENTORED_ENV.source
 
 if [[ -f "/MENTORED_IP_LIST.json" ]]
 then
