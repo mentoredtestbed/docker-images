@@ -46,7 +46,8 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main
 
     def on_publish(client, userdata, mid):
         main_logger.info(f"Message {mid} published")
-        mqtt_logger.info(f"{time.time()},{mqtt_config['MQTT_TOPIC']},,published")
+        # TODO: Fix this so that it logs the correct data
+        # mqtt_logger.info(f"{time.time()},{mqtt_config['MQTT_TOPIC']},{userdata},published")
 
     def on_message(client, userdata, message):
         main_logger.info(f"Received message: '{message.payload.decode()}' on topic: '{message.topic}'")
@@ -73,6 +74,8 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main
         try:
             while True:
                 random_data = random.randint(1, 100)
+                client.userdata=random_data
+                mqtt_logger.info(f"{time.time()},{mqtt_config['MQTT_TOPIC']},{random_data},published")
                 client.publish(mqtt_config["MQTT_TOPIC"], payload=random_data, qos=0)
                 main_logger.info(f"Sent data: {random_data}")
                 sleep_time_in_seconds = sleep_time_max if static_behavior else random.uniform(sleep_time_min, sleep_time_max)
