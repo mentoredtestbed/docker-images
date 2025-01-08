@@ -176,7 +176,7 @@ def start_requests(
             if not silent:
                 print(f"An error occurred: {e}")
                 with open(output, 'a') as f:
-                    f.write("{},ERROR:{}".format(time.time() - t_init_server, str(e)))
+                    f.write("{},ERROR:{},0".format(time.time() - t_init_server, str(e)))
                     f.write("\n")
                     f.flush()
         # Flush stdout
