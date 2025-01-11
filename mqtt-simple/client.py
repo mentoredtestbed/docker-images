@@ -39,7 +39,7 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main
         if rc == 0:  # Successful connection
             if mqtt_config["MQTT_MODE"] == "sub":
                 mqtt_topic = mqtt_config["MQTT_TOPIC"]
-                client.subscribe(mqtt_topic, qos=0)
+                client.subscribe(mqtt_topic, qos=mqtt_config["MQTT_QOS"])
                 main_logger.info(f"Subscribed to {mqtt_topic}")
         else:
             main_logger.error(f"Connection failed with result code {rc}")
@@ -73,10 +73,10 @@ def main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main
         client.loop_start()  # Start the loop in a background thread
         try:
             while True:
-                random_data = random.randint(1, 100)
+                random_data = random.randint(100000, 999999)
                 client.userdata=random_data
                 mqtt_logger.info(f"{time.time()},{mqtt_config['MQTT_TOPIC']},{random_data},published")
-                client.publish(mqtt_config["MQTT_TOPIC"], payload=random_data, qos=0)
+                client.publish(mqtt_config["MQTT_TOPIC"], payload=random_data, qos=mqtt_config["MQTT_QOS"])
                 main_logger.info(f"Sent data: {random_data}")
                 sleep_time_in_seconds = sleep_time_max if static_behavior else random.uniform(sleep_time_min, sleep_time_max)
                 time.sleep(sleep_time_in_seconds)
@@ -98,6 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--topic", help="MQTT topic", default=None, type=str)
     parser.add_argument("-m", "--mode", help="MQTT mode (pub/sub)", default=None, type=str)
     parser.add_argument("-c", "--client_id", help="MQTT client ID", default=None, type=str)
+    parser.add_argument("-q", "--qos", help="MQTT QoS", default=0, type=int)
     parser.add_argument("-o", "--output", help="Output log file", default="mqtt_client_log.txt", type=str)
     parser.add_argument('--static_behavior', action='store_true', help='Static behavior (no randomization)')
     args = parser.parse_args()
@@ -116,14 +117,16 @@ if __name__ == "__main__":
     mqtt_client_id = args.client_id or os.getenv('MQTT_CLIENT_ID') or os.getenv('HOSTNAME')
     mqtt_topic = args.topic or os.getenv('MQTT_TOPIC', 'mentored/topic')
     mqtt_mode = args.mode or os.getenv('MQTT_MODE', 'pub')
+    mqtt_qos = args.qos or os.getenv('MQTT_QOS', 0)
 
     mqtt_config = {
         "MQTT_BROKER": mqtt_broker,
         "MQTT_PORT": args.port,
         "MQTT_TOPIC": mqtt_topic,
         "MQTT_MODE": mqtt_mode,
-        "MQTT_CLIENT_ID": mqtt_client_id
+        "MQTT_CLIENT_ID": mqtt_client_id,
+        "MQTT_QOS": int(mqtt_qos)
     }
 
-    main_logger.info(f"Starting client with broker: {mqtt_broker}:{args.port}, mode: {mqtt_mode}, topic: {mqtt_topic}")
+    main_logger.info(f"Starting client with broker: {mqtt_broker}:{args.port}, mode: {mqtt_mode}, topic: {mqtt_topic}, QoS: {mqtt_qos}")
     main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main_logger, mqtt_logger)
