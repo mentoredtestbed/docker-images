@@ -21,7 +21,10 @@ agents = [
     'Mozilla/5.0 (X11; Gentoo; Linux x86_64; rv:61.0) AppleWebKit/537.36 (KHTML, like Gecko)',
 ]
 
-headers = {"User-Agent":random.choice(agents)}
+headers = {
+    "User-Agent": random.choice(agents),
+    "Accept": "*/*"  # This is the change to add the Accept header
+}
 
 route_list = [
     '/',
@@ -123,7 +126,7 @@ def start_requests(
 
     t_init_server = time.time()
 
-    client = httpx.Client(http2=http2, verify=not ignore_tls)
+    client = httpx.Client(http2=http2, verify=not ignore_tls, headers=headers)
     print(f"{time.time() - t_init_server:.3f} seconds to create client")
     schema = "http://"
 
