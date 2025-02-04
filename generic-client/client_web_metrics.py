@@ -121,7 +121,7 @@ def start_requests(
         output = os.path.join(output, "client_delay.csv")
 
     with open(output, 'a') as f:
-        f.write("time,delay (seconds)")
+        f.write("time,delay (seconds),timestamp-init-loop")
         f.write("\n")
 
     t_init_server = time.time()
