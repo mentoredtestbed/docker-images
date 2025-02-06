@@ -8,6 +8,7 @@ import httpx  # Add httpx for HTTP/2 support
 import sys
 import netifaces as ni
 import json
+import ssl
 
 agents = [
     'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko)',
@@ -125,8 +126,14 @@ def start_requests(
         f.write("\n")
 
     t_init_server = time.time()
+    verify = True
+    if ignore_tls:
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE  # Disables certificate verification
+        verify=ssl_context
 
-    client = httpx.Client(http2=http2, verify=not ignore_tls, headers=headers)
+    client = httpx.Client(http2=http2, verify=verify, headers=headers)
     print(f"{time.time() - t_init_server:.3f} seconds to create client")
     schema = "http://"
 
