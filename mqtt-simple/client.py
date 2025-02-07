@@ -113,7 +113,7 @@ if __name__ == "__main__":
     sleep_time_max = args.sleep_time_max
     static_behavior = args.static_behavior
 
-    mqtt_broker = args.server_ip or os.getenv('MQTT_BROKER', 'localhost')
+    mqtt_broker = args.server_ip or os.getenv('MQTT_BROKER', os.getenv('SERVER_NA_NAME', 'localhost'))
     mqtt_client_id = args.client_id or os.getenv('MQTT_CLIENT_ID') or os.getenv('HOSTNAME')
     mqtt_topic = args.topic or os.getenv('MQTT_TOPIC', 'mentored/topic')
     mqtt_mode = args.mode or os.getenv('MQTT_MODE', 'pub')
@@ -127,6 +127,12 @@ if __name__ == "__main__":
         "MQTT_CLIENT_ID": mqtt_client_id,
         "MQTT_QOS": int(mqtt_qos)
     }
+    # Execute external python program
+    try:
+        cmd=f"mentored-registry-action -a mqtt-client-init -o /app/results/ -dp {args.port} -t {mqtt_broker} -n \"Starting client with broker: mode: {mqtt_mode}, topic: {mqtt_topic}, QoS: {mqtt_qos}\""
+        os.system(cmd)
+    except Exception as e:
+        main_logger.error(f"Failed runnig mentored command: {e}")
 
     main_logger.info(f"Starting client with broker: {mqtt_broker}:{args.port}, mode: {mqtt_mode}, topic: {mqtt_topic}, QoS: {mqtt_qos}")
     main_loop(mqtt_config, sleep_time_min, sleep_time_max, static_behavior, main_logger, mqtt_logger)

@@ -32,6 +32,14 @@ for key in config.keys():
 if len(sys.argv) > 1:
     config["STREAM_SERVER_ADDR"] = sys.argv[1]
 
+ # Execute external python program
+try:
+    cmd=f"mentored-registry-action -a ip-camera-init -o /app/results/ -dp {config['STREAM_SERVER_PORT']} -t {config['STREAM_SERVER_ADDR']} -n \"Starting stream {config['STREAM_NAME']}\""
+    os.system(cmd)
+except Exception as e:
+    print(f"Failed runnig mentored command: {e}")
+
+
 ping_bin = shutil.which("ping")
 if not ping_bin:
     sys.exit("No 'ping' binary found. Exiting.")
