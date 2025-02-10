@@ -13,6 +13,9 @@ def update_hosts(json_path, hosts_path="/etc/hosts"):
                 replica=0
                 for entry in entries:
                     ip_address = entry[0][0]
+                    if replica == 0:
+                        hosts_file.write(f"{ip_address} {hostname}\n")
+                        print(f"Added {ip_address} {hostname} to {hosts_path}")    
                     hosts_file.write(f"{ip_address} {hostname}-{replica}\n")
                     print(f"Added {ip_address} {hostname}-{replica} to {hosts_path}")
                     replica+=1
