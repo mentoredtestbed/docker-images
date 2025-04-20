@@ -1,0 +1,6 @@
+
+flwr==1.6.0
+tensorflow==2.11.0
+numpy==1.23.5
+psutil==5.9.4
+pyaml==25.1.0
