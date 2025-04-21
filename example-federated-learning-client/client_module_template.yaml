@@ -19,5 +19,5 @@
     deploy:
       replicas: 1
       restart_policy:
-        # condition: on-faiulre
+        # condition: on-failure
         condition: "no"
