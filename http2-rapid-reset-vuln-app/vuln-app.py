@@ -42,7 +42,7 @@ def random_text():
         route += "?" + "&".join([f"{k}={v}" for k, v in get_params.items()])
     else:
         route = "/random"
-    size_in_mb = expected_size/1024^2
+    size_in_mb = expected_size / 1024**2
     print(f"Returning {size_in_mb} Mbytes of random data")
     return jsonify({
         "random_base64": base64_encoded,
