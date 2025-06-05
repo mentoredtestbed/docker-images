@@ -3,7 +3,7 @@ ARG BASE_IMAGE=mentored-base
 ARG BASE_IMAGE_TAG=latest
 FROM $BASE_REPO$BASE_IMAGE:$BASE_IMAGE_TAG
 
-RUN pip3 install --break-system-packages numpy
+RUN pip3 install --break-system-packages numpy httpx[http2] netifaces
 
 COPY ./client_web_metrics.py /
 

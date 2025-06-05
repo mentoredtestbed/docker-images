@@ -17,8 +17,8 @@ ulogd -d
 # iptables -A INPUT -j LOG --log-level info  --log-prefix "IPTABLES-DROP: "
 # iptables -A LOGGING -j DROP -i net1
 mentored-registry-action -a iptables-config -o /app/results/ -n "Configuring IPTables"
-iptables -A INPUT -p tcp -i net1 -m multiport ! --dports 22,80 -j NFLOG --nflog-prefix "[TCP-NOT-80-22]:" --nflog-group 1
-iptables -A INPUT -p udp -i net1 -m multiport ! --dports 22,80 -j NFLOG --nflog-prefix "[UDP-NOT-80-22]:" --nflog-group 1
+iptables -A INPUT -p tcp -i net1 -m multiport ! --dports 22,80,443 -j NFLOG --nflog-prefix "[TCP-NOT-HTTP-SSH]:" --nflog-group 1
+iptables -A INPUT -p udp -i net1 -m multiport ! --dports 22,80,443 -j NFLOG --nflog-prefix "[UDP-NOT-HTTP-SSH]:" --nflog-group 1
 iptables -A INPUT -i net1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 ip6tables -A INPUT -i net1 -p icmpv6 -j ACCEPT
 

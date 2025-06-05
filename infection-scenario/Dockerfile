@@ -22,4 +22,7 @@ COPY ./10000_common_passwords /app
 COPY ./10_common_passwords /app
 COPY ./attacker.py /app
 
+RUN apt update && apt install -y rsyslog
+RUN echo "auth.* /app/results/sshd.log" > /etc/rsyslog.d/50-sshd.conf
+
 #ENTRYPOINT ["tcpdump", "-i", "eth0", "-w", "pcap_server.pcap"]
