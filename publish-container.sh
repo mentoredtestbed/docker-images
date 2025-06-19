@@ -21,7 +21,7 @@ fi
 build_single() {
     FULL_CONTAINER_IMAGE_URL="$REPO$1:$TAG"
     echo "Building $FULL_CONTAINER_IMAGE_URL"
-    docker-buildx build                                     \
+    docker buildx build                                     \
                       --build-arg BASE_REPO=$REPO           \
                       --build-arg BASE_IMAGE=mentored-base  \
                       --build-arg BASE_IMAGE_TAG=$TAG       \
