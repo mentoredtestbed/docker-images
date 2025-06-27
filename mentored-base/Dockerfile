@@ -1,23 +1,18 @@
-FROM debian:bookworm
+FROM debian:bookworm-slim
 
 ENV LANG=C.UTF-8
 
-RUN apt-get -qq -y update && \
-    apt-get -qq -y install \
+RUN apt -qq -y update && \
+    apt -qq -y install --no-install-recommends --no-install-suggests \
     at \
     curl \
-    git \
     iperf3 \
     iproute2 \
     iputils-arping \
     iputils-ping \
     iputils-tracepath \
     less \
-    mtr \
     nano \
-    net-tools \
-    nmap \
-    procps \
     python3 \
     python3-icmplib \
     python3-pip \
@@ -25,9 +20,8 @@ RUN apt-get -qq -y update && \
     python3-setuptools \
     python3-yaml \
     tcpdump \
-    vim \
     wondershaper && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt clean && rm -rf /var/lib/apt/lists/*
 
 
 COPY ./entry.sh /
