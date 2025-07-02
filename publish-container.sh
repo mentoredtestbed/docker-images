@@ -11,11 +11,6 @@ TOBUILD=$3 # eg --all
 
 dependencies=("mentored-base" "generic-botnet")
 
-# If not root, exit
-if [ "$EUID" -ne 0 ]; then
-    echo "Please run as root"
-    exit 1
-fi
 
 if [ -z "$REPO" ] || [ -z "$TAG" ]; then
     echo "Usage: $0 ghcr.io/mentoredtestbed/ your-tag"
