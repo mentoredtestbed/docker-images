@@ -2,7 +2,10 @@
 
 The OCI container images used in MENTORED Testbed.
 
-Build instructions
+Build instructions bellow:
+
+## Option 1) Use the K8S cluster resources
+<details>
 
 ## First get the kubeconfig with a cluster that has both AArch64 and AMD64 nodes
 ```bash
@@ -34,6 +37,41 @@ docker buildx create \
 ```bash
 docker buildx use mentored-ufmg-kube
 ```
+</details>
+
+## Option 2) Local builds
+
+<details>
+```bash
+docker buildx create \
+  --name mentored-local-builder \
+  --driver docker-container \
+  --platform linux/amd64,linux/arm64
+```
+
+### Activate it
+
+```bash
+docker buildx use mentored-local-builder
+```
+
+### List buildx contexts (should show the current one with a * at the end)
+
+```bash
+docker buildx ls # Should list both as inactive or running
+```
+### Bootstrap the buildkit in that builder:
+
+```bash
+docker buildx inspect --bootstrap
+```
+
+### Check if it's marked as running
+
+```bash
+docker buildx ls
+```
+</details>
 
 ## Dispatch the build
 
