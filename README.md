@@ -76,7 +76,11 @@ docker buildx ls
 ## Dispatch the build
 
 ```bash
-./publish-container.sh ghcr.io/mentoredtestbed/ latest --all
+./publish-container.sh ghcr.io/mentoredtestbed/ latest --all --enable-aarch64
 ```
 
 (Otherwise it will build only files in `to-build.csv`)
+
+### Speeding up builds during development
+
+You can ommit the `--enable-aarch64` argumment to skip building AArch64 images.
