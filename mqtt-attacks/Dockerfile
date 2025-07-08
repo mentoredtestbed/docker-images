@@ -3,7 +3,11 @@ ARG BASE_IMAGE_TAG=latest
 FROM ${BASE_REPO}"infection-scenario":${BASE_IMAGE_TAG}
 
 # Install mosquitto
-RUN apt-get update && apt install -y tshark
+RUN apt-get update && apt install -y \
+    git \
+    tshark \
+    && apt clean && rm -rf /var/lib/apt/lists/*
+
 RUN git clone https://github.com/stfbk/mqttsa.git /usr/local/bin/mqttsa &&\
     cd /usr/local/bin/mqttsa &&\
     pip install -r requirements.txt --break-system-packages
