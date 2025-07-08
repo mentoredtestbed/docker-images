@@ -34,7 +34,7 @@ if [ -z "$MENTORED_MTU" ]; then
 else
     echo "MENTORED_MTU is set to $MENTORED_MTU"
 fi
-ifconfig net1 mtu $MENTORED_MTU up
+ip link set dev $MENTORED_EXP_IFNAME mtu $MENTORED_MTU
 
 
 # if MENTORED_PRE_CMD is set, then execute it in the background
