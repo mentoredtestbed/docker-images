@@ -43,9 +43,10 @@ def get_env_var(name, default):
     return os.environ[name] if name in os.environ else default
 
 def my_ip():
-    # Get IP for interface name net1
-    return ni.ifaddresses('net1')[ni.AF_INET][0]['addr']
-    
+    # Get IP for interface name exp_iface
+    exp_iface = os.environ.setdefault('MENTORED_EXP_IFNAME', 'net1')
+    return ni.ifaddresses(exp_iface)[ni.AF_INET][0]['addr']
+
 def get_replica_id():
     my_name=os.environ.get('HOSTNAME', None)
     # Open /MENTORED_IP_LIST.json file
