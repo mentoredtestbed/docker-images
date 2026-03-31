@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 ENV LANG=C.UTF-8
 
@@ -11,16 +11,17 @@ RUN apt -qq -y update && \
     iputils-arping \
     iputils-ping \
     iputils-tracepath \
+    kubernetes-client \
     less \
     nano \
+    procps \
     python3 \
     python3-icmplib \
     python3-pip \
     python3-psutil \
     python3-setuptools \
     python3-yaml \
-    tcpdump \
-    wondershaper && \
+    tcpdump && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
 
