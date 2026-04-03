@@ -6,11 +6,13 @@ RUN apt -qq -y update && \
     apt -qq -y install --no-install-recommends --no-install-suggests \
     at \
     curl \
+    gawk \
     iperf3 \
     iproute2 \
     iputils-arping \
     iputils-ping \
     iputils-tracepath \
+    jq \
     kubernetes-client \
     less \
     nano \
@@ -21,6 +23,7 @@ RUN apt -qq -y update && \
     python3-psutil \
     python3-setuptools \
     python3-yaml \
+    socat \
     tcpdump && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
