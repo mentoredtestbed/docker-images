@@ -1,19 +1,32 @@
-FROM debian:bullseye
+FROM debian:trixie-slim
 
 ENV LANG=C.UTF-8
 
-RUN apt-get -qq -y update && \
-    apt-get -qq -y install \
-    t50 hping3 slowhttptest \
-    wondershaper procps python3-pip \
-    nano vim curl net-tools iproute2 \
-    python3 python3-pip nano \
-    iputils-ping iputils-arping iputils-tracepath \
-    nmap at less
+RUN apt -qq -y update && \
+    apt -qq -y install --no-install-recommends --no-install-suggests \
+    at \
+    curl \
+    gawk \
+    iperf3 \
+    iproute2 \
+    iputils-arping \
+    iputils-ping \
+    iputils-tracepath \
+    jq \
+    kubernetes-client \
+    less \
+    nano \
+    procps \
+    python3 \
+    python3-icmplib \
+    python3-pip \
+    python3-psutil \
+    python3-setuptools \
+    python3-yaml \
+    socat \
+    tcpdump && \
+    apt clean && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --upgrade setuptools pip
-RUN ls
-RUN pip3 install --break-system-packages icmplib==3.0.4 pyaml==24.7.0 psutil==6.0.0
 
 COPY ./entry.sh /
 COPY ./create_env_from_mentored_ip_list.py /

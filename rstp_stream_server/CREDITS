@@ -1,0 +1,14 @@
+Disclaimer and Acknowledgments
+
+This container image and its Dockerfiles are adaptations based on the Gotham
+testbed originally developed by Xabier Sáez-de-Cámara and collaborators. We 
+gratefully acknowledge the authors for their work, as detailed in the Gotham
+testbed publication.
+
+Original source code and artifacts: https://github.com/xsaga/gotham-iot-testbed
+
+Full Citation:
+X. Sáez-de-Cámara, J. L. Flores, C. Arellano, A. Urbieta and U. Zurutuza, 
+"Gotham Testbed: A Reproducible IoT Testbed for Security Experiments and 
+Dataset Generation," in IEEE Transactions on Dependable and Secure 
+Computing, doi: 10.1109/TDSC.2023.3247166.

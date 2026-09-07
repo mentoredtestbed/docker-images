@@ -8,14 +8,10 @@ IFS=, read -r -a tobuild < to-build.csv
 REPO=$1 # eg ghcr.io/mentoredtestbed/
 TAG=$2  # eg 0.0.1
 TOBUILD=$3 # eg --all
+ENABLE_ARM64=${4:-}
 
 dependencies=("mentored-base" "generic-botnet")
 
-# If not root, exit
-if [ "$EUID" -ne 0 ]; then
-    echo "Please run as root"
-    exit 1
-fi
 
 if [ -z "$REPO" ] || [ -z "$TAG" ]; then
     echo "Usage: $0 ghcr.io/mentoredtestbed/ your-tag"
@@ -25,12 +21,12 @@ fi
 build_single() {
     FULL_CONTAINER_IMAGE_URL="$REPO$1:$TAG"
     echo "Building $FULL_CONTAINER_IMAGE_URL"
-    docker-buildx build                                     \
+    docker buildx build                                     \
                       --build-arg BASE_REPO=$REPO           \
                       --build-arg BASE_IMAGE=mentored-base  \
                       --build-arg BASE_IMAGE_TAG=$TAG       \
                       -t $FULL_CONTAINER_IMAGE_URL          \
-                      --platform linux/amd64,linux/arm64    \
+                      --platform linux/amd64${ENABLE_ARM64:+,linux/arm64} \
                       --push $1
     # Exit if previous command failed
     if [ $? -ne 0 ]; then
@@ -82,6 +78,9 @@ build_only() {
 # if --all build all containers, else build only the ones in the to-build.csv file
 if [ "$3" == "--all" ]; then
     build_all
-else
+elif [ "$3" == "--only-build-list" ]; then
     build_only
+else
+    echo "$0: Invalid argument. Use --all to build all containers or --only-build-list to build only the ones in the to-build.csv file."
+    exit 1
 fi

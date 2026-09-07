@@ -33,16 +33,17 @@ def main():
   # load IP_LIST_DATA from /MENTORED_IP_LIST.json
   with open('/MENTORED_IP_LIST.json', 'r') as f:
     IP_LIST_DATA = json.load(f)
-
+  
+  exp_iface = os.environ.get('MENTORED_EXP_IFNAME', 'net1')
   vulnerable_ips = []
   for nodeactor_name, nodeactor_data in IP_LIST_DATA.items():
     if nodeactor_name not in nodeactor_target_list:
       continue
     for pod in nodeactor_data:
-      # find the ip address related to net1
-      is_net1 = [x[2]=='net1' for x in pod]
-      # find index in is_net1 that is True
-      idx = is_net1.index(True)
+      # find the ip address related to exp_iface
+      is_exp_iface = [x[2]==exp_iface for x in pod]
+      # find index in is_exp_iface that is True
+      idx = is_exp_iface.index(True)
       ip = pod[idx][0]
       vulnerable_ips.append(ip)
 

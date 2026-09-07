@@ -1,14 +1,14 @@
 #!/usr/bin/python3
-#
-# read the data from the URL and print it
-#
-import sys
-import urllib.request
 import time
 import numpy as np
 import argparse
 import os
 import random
+import httpx  # Add httpx for HTTP/2 support
+import sys
+import netifaces as ni
+import json
+import ssl
 
 agents = [
     'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko)',
@@ -22,7 +22,10 @@ agents = [
     'Mozilla/5.0 (X11; Gentoo; Linux x86_64; rv:61.0) AppleWebKit/537.36 (KHTML, like Gecko)',
 ]
 
-headers = {"User-Agent":random.choice(agents)}
+headers = {
+    "User-Agent": random.choice(agents),
+    "Accept": "*/*"  # This is the change to add the Accept header
+}
 
 route_list = [
     '/',
@@ -35,6 +38,27 @@ route_list = [
     '/api/v1',
     '/api/v1/data',
 ]
+
+def get_env_var(name, default):
+    return os.environ[name] if name in os.environ else default
+
+def my_ip():
+    # Get IP for interface name exp_iface
+    exp_iface = os.environ.setdefault('MENTORED_EXP_IFNAME', 'net1')
+    return ni.ifaddresses(exp_iface)[ni.AF_INET][0]['addr']
+
+def get_replica_id():
+    my_name=os.environ.get('HOSTNAME', None)
+    # Open /MENTORED_IP_LIST.json file
+    with open('/MENTORED_IP_LIST.json') as f:
+        ip_list = json.load(f)
+
+        for actor in ip_list:
+            for replica_id, ip, mask, iname in enumerate(actor['ips']):
+                if ip == my_ip():
+                    return replica_id
+
+    return 0
 
 def create_random_route():
     # 15% chance of returning a static media file
@@ -88,7 +112,10 @@ def start_requests(
         server_ip,
         output,
         silent,
-        static_behavior):
+        static_behavior,
+        http2=False,
+        ignore_tls=False
+        ):
     # Ensure that directory exists (recursive)
     os.makedirs(os.path.dirname(output), exist_ok=True)
     # if the output is a directory, append the file name
@@ -96,39 +123,57 @@ def start_requests(
         output = os.path.join(output, "client_delay.csv")
 
     with open(output, 'a') as f:
-        f.write("time,delay (seconds)")
+        f.write("time,delay (seconds),timestamp-init-loop")
         f.write("\n")
 
     t_init_server = time.time()
+    verify = True
+    if ignore_tls:
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE  # Disables certificate verification
+        verify=ssl_context
+
+    client = httpx.Client(http2=http2, verify=verify, headers=headers)
+    print(f"{time.time() - t_init_server:.3f} seconds to create client")
+    schema = "http://"
+
+    if http2: # Most servers use HTTPS for HTTP/2
+        schema = "https://"
 
     while True:
         t_init = time.time()
         get_params = {}
-
+        
+        t_init_step = time.time()
         if not static_behavior:
             random_route, expected_size = create_random_route()
-            route = f'http://{server_ip}' + random_route
+            route = f'{schema}{server_ip}' + random_route
             if random.random() > 0.5:
                 get_params['min_words'] = 1
                 # Exponential probability considering max = 2**30 (1 GB)
                 get_params['max_words'] = int(expected_size)
                 route += "?" + "&".join([f"{k}={v}" for k, v in get_params.items()])
         else:
-            route = f'http://{server_ip}/'
+            route = f'{schema}{server_ip}/'
+        print(f"{time.time() - t_init_step:.3f} seconds to generate route")
 
+        # if not silent:
+        print(f"GET {route}")
 
-        if not silent:
-            print(f"GET {route}")
-        
         try:
-            req = urllib.request.Request(route, headers=headers)
-            webUrl = urllib.request.urlopen(req)
-            data = webUrl.read()
+            t_init_step = time.time()
+            response = client.get(route, headers=headers)
+            print(f"{time.time() - t_init_step:.3f} seconds to make request")
+            sys.stdout.flush()
+            data = response.text
+
             time_delay = time.time() - t_init
 
-            stat = "{},{:.3f}".format(
+            stat = "{},{:.3f},{}".format(
                 time.time() - t_init_server,
-                time_delay)
+                time_delay,
+                t_init)
 
             if not silent:
                 print(stat)
@@ -138,51 +183,37 @@ def start_requests(
                 f.write("\n")
                 f.flush()
 
-        except urllib.error.URLError as e:
-            if not silent:
-                print(f"Failed to reach the server: {e.reason}")
-                with open(output, 'a') as f:
-                    f.write("{},ERROR:{}".format(time.time() - t_init_server, e.reason))
-                    f.write("\n")
-                    f.flush()
-
         except Exception as e:
             if not silent:
                 print(f"An error occurred: {e}")
                 with open(output, 'a') as f:
-                    f.write("{},ERROR:{}".format(time.time() - t_init_server, str(e)))
+                    f.write("{},ERROR:{},0".format(time.time() - t_init_server, str(e)))
                     f.write("\n")
                     f.flush()
         # Flush stdout
         sys.stdout.flush()
         time.sleep(np.random.uniform(sleep_time_min, sleep_time_max))
 
-
 if __name__ == "__main__":
-
     args = argparse.ArgumentParser()
     args.add_argument("-smin", "--sleep_time_min", help="Minimum sleep time", default=0.1, type=float)
     args.add_argument("-smax", "--sleep_time_max", help="Maximum sleep time", default=0.5, type=float)
     args.add_argument("-ip", "--server_ip", help="Server IP", default="localhost", type=str)
     args.add_argument("-o", "--output", help="Output file", default="/client_delay.csv")
     args.add_argument("-s", "--silent", help="Silent mode", action="store_true")
-
-    # Store true
     args.add_argument('--static_behavior', action='store_true', help='Static behavior (no randomization)')
+    args.add_argument("--http2", action="store_true", help="Enable HTTP/2 support", default=False)
+    args.add_argument("--ignore-tls", action="store_true", help="Ignore TLS certificate validation")
 
     args = args.parse_args()
 
-    sleep_time_min = args.sleep_time_min
-    sleep_time_max = args.sleep_time_max
-    server_ip = args.server_ip
-    output = args.output
-    silent = args.silent
-    static_behavior = args.static_behavior
-
     start_requests(
-        sleep_time_min,
-        sleep_time_max,
-        server_ip,
-        output,
-        silent,
-        static_behavior)
+        args.sleep_time_min,
+        args.sleep_time_max,
+        args.server_ip,
+        args.output,
+        args.silent,
+        args.static_behavior,
+        args.http2,
+        args.ignore_tls
+    )
