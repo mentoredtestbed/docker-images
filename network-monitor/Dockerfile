@@ -14,4 +14,8 @@ RUN apt-get -y install tshark iptables ulogd2
 COPY ./bin/* /usr/local/bin/
 COPY ulogd.conf /etc/ulogd.conf
 
+RUN mkdir -p /app/logs
+
+RUN pip3 install dool==1.3.4
+
 WORKDIR /app

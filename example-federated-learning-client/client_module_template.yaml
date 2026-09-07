@@ -1,0 +1,23 @@
+  client-<REAL_CLIENT_ID>:
+    build: 
+      context: ./client
+    depends_on:
+      - server
+    networks:
+      - fl-net
+    command: python3 client.py
+    volumes:
+      - ./logs:/app/logs  # Persist logs
+    environment:
+      - FL_SERVER=server:8080
+      - TOTAL_CLIENTS=<TOTAL>
+      - CLIENT_ID=<ID>
+      - NUM_SAMPLES=<NUM_SAMPLES>
+      - LAYER_SIZE=<LAYER_SIZE>
+      - REAL_CLIENT_ID=<REAL_CLIENT_ID>
+      - IGNORE_WARMUP=<IGNORE_WARMUP>
+    deploy:
+      replicas: 1
+      restart_policy:
+        # condition: on-failure
+        condition: "no"
