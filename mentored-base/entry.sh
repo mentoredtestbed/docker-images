@@ -69,71 +69,8 @@ fi
 # STEP 2: CREATE VXLAN OVERLAY NETWORK (Now that DNS & Pods are Ready)
 # ==============================================================================
 if [ -n "$MENTORED_TOPOLOGY_CONFIG" ]; then
-    echo "[VXLAN Setup] All pods ready. Starting VXLAN setup from MENTORED_TOPOLOGY_CONFIG..."
-    python3 -c "
-import os, json, time, socket, subprocess
-
-config_raw = os.environ.get('MENTORED_TOPOLOGY_CONFIG', '{}')
-try:
-    config = json.loads(config_raw)
-    ifname = config.get('interface', os.environ.get('MENTORED_EXP_IFNAME', 'net1'))
-    vni = config.get('vni', 200)
-    ip = config.get('ip')
-    remote_host = config.get('remote_host') or config.get('remote_ip')
-    mtu = config.get('mtu', 1280)
-    underlay_dev = 'eth0'
-    dstport = '9999'
-
-    if not remote_host:
-        print('[VXLAN Setup] Error: remote_host (or remote_ip) is required!', flush=True)
-    else:
-        remote_ip = None
-        # Set a 5-second timeout on socket operations so gethostbyname does not hang indefinitely
-        socket.setdefaulttimeout(5.0)
-
-        print(f'[VXLAN Setup] Resolving IP for remote host: {remote_host}...', flush=True)
-        for attempt in range(30):
-            try:
-                remote_ip = socket.gethostbyname(remote_host)
-                print(f'[VXLAN Setup] Successfully resolved {remote_host} -> {remote_ip}', flush=True)
-                break
-            except (socket.gaierror, socket.timeout) as err:
-                print(f'[VXLAN Setup] DNS attempt {attempt+1}/30 failed for {remote_host}: {err}', flush=True)
-                time.sleep(2)
-
-        if not remote_ip:
-            raise RuntimeError(f'Could not resolve DNS for remote host: {remote_host}')
-
-        # Reset timeout back to default
-        socket.setdefaulttimeout(None)
-
-        # Check if interface already exists
-        res = subprocess.run(['ip', 'link', 'show', ifname], capture_output=True)
-        if res.returncode != 0:
-            print(f'[VXLAN Setup] Creating VXLAN interface {ifname} (VNI: {vni}, Remote: {remote_ip}, Dev: {underlay_dev}, Port: {dstport})', flush=True)
-            cmd_create = [
-                'ip', 'link', 'add', ifname,
-                'type', 'vxlan',
-                'id', str(vni),
-                'remote', remote_ip,
-                'dev', underlay_dev,
-                'dstport', dstport
-            ]
-            subprocess.run(cmd_create, check=True)
-
-        # Assign overlay IP address
-        if ip:
-            print(f'[VXLAN Setup] Assigning IP {ip} to interface {ifname}', flush=True)
-            subprocess.run(['ip', 'addr', 'add', ip, 'dev', ifname], check=False)
-
-        # Set MTU & Bring Up
-        print(f'[VXLAN Setup] Bringing up {ifname} with MTU {mtu}', flush=True)
-        subprocess.run(['ip', 'link', 'set', 'dev', ifname, 'mtu', str(mtu)], check=False)
-        subprocess.run(['ip', 'link', 'set', 'dev', ifname, 'up'], check=True)
-
-except Exception as e:
-    print(f'[VXLAN Setup] ERROR: Failed to configure VXLAN overlay: {e}', flush=True)
-"
+    echo "[Topology Setup] Executing setup-topology.py..."
+    python3 /usr/local/bin/setup-topology.py
 fi
 # ==============================================================================
 # STEP 4: TIMED BENCHMARK EXECUTION
