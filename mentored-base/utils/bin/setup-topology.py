@@ -37,7 +37,8 @@ def configure_topology():
         sys.exit(1)
 
     underlay_dev = config.get("underlay", "eth0")
-    default_dstport = str(config.get("dstport", 9999))
+    dstport = str(config.get("dstport", 9999))
+    base_vni = int(config.get("vni", 200))
     socket.setdefaulttimeout(5.0)
 
     # --------------------------------------------------------------------------
@@ -55,19 +56,16 @@ def configure_topology():
         res = run_cmd(["ip", "link", "show", br_name])
         if res.returncode != 0:
             print(f"[Bridge Setup] Creating bridge {br_name}", flush=True)
-            run_cmd(
-                ["ip", "link", "add", "name", br_name, "type", "bridge"],
-                check=True,
-            )
+            run_cmd(["ip", "link", "add", "name", br_name, "type", "bridge"], check=True)
+
+        # Set forward_delay to 0 so ports go to FORWARDING state immediately
+        run_cmd(["ip", "link", "set", "dev", br_name, "type", "bridge", "forward_delay", "0", "stp_state", "0"])
 
         if br_mtu:
             run_cmd(["ip", "link", "set", "dev", br_name, "mtu", str(br_mtu)])
 
         if br_ip:
-            print(
-                f"[Bridge Setup] Assigning IP {br_ip} to bridge {br_name}",
-                flush=True,
-            )
+            print(f"[Bridge Setup] Assigning IP {br_ip} to bridge {br_name}", flush=True)
             run_cmd(["ip", "addr", "add", br_ip, "dev", br_name])
 
         run_cmd(["ip", "link", "set", br_name, "up"], check=True)
@@ -83,13 +81,23 @@ def configure_topology():
     elif not vxlan_list:
         vxlan_list = []
 
-    for vx in vxlan_list:
-        ifname = vx.get("interface", vx.get("name", "net1"))
-        vni = vx.get("vni", 200)
+    used_vnis = set()
+
+    for idx, vx in enumerate(vxlan_list):
+        ifname = vx.get("interface", vx.get("name", f"vxlan{idx}"))
+        
+        # Determine unique VNI per interface
+        requested_vni = vx.get("vni")
+        if requested_vni is not None and int(requested_vni) not in used_vnis:
+            vni = int(requested_vni)
+        else:
+            vni = base_vni + idx
+        used_vnis.add(vni)
+
         ip = vx.get("ip")
         remote_host = vx.get("remote_host") or vx.get("remote_ip")
         mtu = vx.get("mtu", 1280)
-        dstport = str(vx.get("dstport", default_dstport))
+        link_dstport = str(vx.get("dstport", dstport))
         master_bridge = vx.get("bridge") or vx.get("master")
 
         if not remote_host:
@@ -99,7 +107,7 @@ def configure_topology():
             )
             continue
 
-        # Resolve host via K8s DNS
+        # Resolve remote host IP
         remote_ip = None
         print(
             f"[VXLAN Setup] Resolving IP for remote host: {remote_host}...",
@@ -127,35 +135,28 @@ def configure_topology():
             )
             continue
 
-        # Create VXLAN link if it doesn't exist
+        # Create Point-to-Point VXLAN link with unique VNI
         res = run_cmd(["ip", "link", "show", ifname])
         if res.returncode != 0:
             print(
-                f"[VXLAN Setup] Creating VXLAN {ifname} (VNI: {vni}, Remote: {remote_ip}, Dev: {underlay_dev}, Port: {dstport})",
+                f"[VXLAN Setup] Creating Point-to-Point VXLAN {ifname} (VNI: {vni}, Remote: {remote_ip}, Dev: {underlay_dev}, Port: {link_dstport})",
                 flush=True,
             )
             cmd_create = [
-                "ip",
-                "link",
-                "add",
-                ifname,
-                "type",
-                "vxlan",
-                "id",
-                str(vni),
-                "remote",
-                remote_ip,
-                "dev",
-                underlay_dev,
-                "dstport",
-                dstport,
+                "ip", "link", "add", ifname,
+                "type", "vxlan",
+                "id", str(vni),
+                "dev", underlay_dev,
+                "dstport", link_dstport,
+                "remote", remote_ip,
+                "learning"
             ]
             run_cmd(cmd_create, check=True)
 
         if mtu:
             run_cmd(["ip", "link", "set", "dev", ifname, "mtu", str(mtu)])
 
-        # Handle slaving to bridge vs standalone IP assignment
+        # Handle slaving to bridge
         if master_bridge:
             res_br = run_cmd(["ip", "link", "show", master_bridge])
             if res_br.returncode != 0:
@@ -163,36 +164,18 @@ def configure_topology():
                     f"[VXLAN Setup] Creating master bridge {master_bridge} for slave {ifname}",
                     flush=True,
                 )
-                run_cmd(
-                    [
-                        "ip",
-                        "link",
-                        "add",
-                        "name",
-                        master_bridge,
-                        "type",
-                        "bridge",
-                    ],
-                    check=True,
-                )
-                run_cmd(
-                    ["ip", "link", "set", master_bridge, "up"], check=True
-                )
+                run_cmd(["ip", "link", "add", "name", master_bridge, "type", "bridge"], check=True)
+                run_cmd(["ip", "link", "set", "dev", master_bridge, "type", "bridge", "forward_delay", "0", "stp_state", "0"])
+                run_cmd(["ip", "link", "set", master_bridge, "up"], check=True)
 
             print(
-                f"[VXLAN Setup] Slaving {ifname} to bridge {master_bridge} (Skipping direct IP on {ifname})",
+                f"[VXLAN Setup] Slaving {ifname} to bridge {master_bridge}",
                 flush=True,
             )
-            run_cmd(
-                ["ip", "link", "set", ifname, "master", master_bridge],
-                check=True,
-            )
+            run_cmd(["ip", "link", "set", ifname, "master", master_bridge], check=True)
+            run_cmd(["bridge", "link", "set", "dev", ifname, "learning", "on", "flood", "on"], check=False)
         else:
             if ip:
-                print(
-                    f"[VXLAN Setup] Assigning IP {ip} to interface {ifname}",
-                    flush=True,
-                )
                 run_cmd(["ip", "addr", "add", ip, "dev", ifname])
 
         run_cmd(["ip", "link", "set", ifname, "up"], check=True)
