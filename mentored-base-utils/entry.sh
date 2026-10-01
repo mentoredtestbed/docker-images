@@ -26,6 +26,16 @@ if [ -n "$MENTORED_PRE_CMD" ]; then
     eval "$MENTORED_PRE_CMD" &
 fi
 
+# 1. Modular Packet Capture Trigger
+if [ "${ENABLE_CAPTURE:-false}" = "true" ]; then
+    /usr/local/bin/start-capture.sh
+fi
+
+# 2. Modular Firewall / IPTables Logging Trigger
+if [ "${ENABLE_IPTABLES_LOGGING:-false}" = "true" ]; then
+    /usr/local/bin/configure-iptables.sh
+fi
+
 # ==============================================================================
 # STEP 1: WAIT FOR ALL PODS TO BE READY
 # ==============================================================================
@@ -42,18 +52,18 @@ cp /MENTORED_READY /app/results/MENTORED_READY
 [ -f /MENTORED_ENV.source ] && cp /MENTORED_ENV.source /app/results/MENTORED_ENV.source
 
 # ==============================================================================
-# STEP 3: MENTORED IP & ENVIRONMENT SOURCE SETUP
+# STEP 2: MENTORED IP & ENVIRONMENT SOURCE SETUP
 # ==============================================================================
 if [[ -f "/MENTORED_IP_LIST.json" ]]
 then
-    python3 /create_env_from_mentored_ip_list.py /MENTORED_IP_LIST.json $SERVER_NA_NAME $MENTORED_EXP_IFNAME SERVER /MENTORED_ENV.source
+    python3 /usr/local/bin/create_env_from_mentored_ip_list.py /MENTORED_IP_LIST.json $SERVER_NA_NAME $MENTORED_EXP_IFNAME SERVER /MENTORED_ENV.source
 
     if [ -z "$MENTORED_DNS" ] || [ "$MENTORED_DNS" == "/etc/hosts" ]; then
         echo "MENTORED_DNS is not set or set to /etc/hosts, setting up /etc/hosts"
-        setup_etc_hosts.py
+        /usr/local/bin/setup_etc_hosts.py
     elif [ "$MENTORED_DNS" == "pod-dns" ]; then
         echo "MENTORED_DNS is set to pod-dns, using MENTORED_DNS_NA as the DNS server..."
-        use_na_as_dns_server.py $MENTORED_DNS_NA
+        /usr/local/bin/use_na_as_dns_server.py $MENTORED_DNS_NA
     fi
 
     if [ ! -f /MENTORED_ENV.source ]; then
@@ -63,17 +73,41 @@ then
     source /MENTORED_ENV.source
     echo "source /MENTORED_ENV.source" >> /root/.bashrc
 
-    python3 /ping_other_ips.py /MENTORED_IP_LIST.json $MENTORED_EXP_IFNAME
+    python3 /usr/local/bin/ping_other_ips.py /MENTORED_IP_LIST.json $MENTORED_EXP_IFNAME
 fi
 # ==============================================================================
-# STEP 2: CREATE VXLAN OVERLAY NETWORK (Now that DNS & Pods are Ready)
+# STEP 3: CREATE VXLAN OVERLAY NETWORK (Now that DNS & Pods are Ready)
 # ==============================================================================
 if [ -n "$MENTORED_TOPOLOGY_CONFIG" ]; then
     echo "[Topology Setup] Executing setup-topology.py..."
     python3 /usr/local/bin/setup-topology.py
 fi
+
 # ==============================================================================
-# STEP 4: TIMED BENCHMARK EXECUTION
+# STEP 4: CONFIGURE & BOOTSTRAP FRR ROUTING DAEMONS
+# ==============================================================================
+if [ -n "$FRR_CONF_CONTENT" ]; then
+    echo "[FRR Setup] Enabling daemons..."
+    sed -i 's/bgpd=no/bgpd=yes/' /etc/frr/daemons
+    sed -i 's/zebra=no/zebra=yes/' /etc/frr/daemons
+
+    echo "[FRR Setup] Writing /etc/frr/frr.conf..."
+    echo "$FRR_CONF_CONTENT" > /etc/frr/frr.conf
+
+    # Fix ownership and socket directory permissions
+    mkdir -p /var/run/frr /var/log/frr
+    chown -R frr:frr /etc/frr /var/run/frr /var/log/frr
+    chmod 640 /etc/frr/frr.conf
+
+    # Clean up lingering lockfiles if present
+    rm -f /run/frr/*.pid /var/run/frr/*.pid
+
+    echo "[FRR Setup] Starting FRR daemon service..."
+    /usr/lib/frr/frrinit.sh start
+fi
+
+# ==============================================================================
+# STEP 5: TIMED BENCHMARK EXECUTION
 # ==============================================================================
 WAIT_FOR_TIME=$(cat /MENTORED_READY)
 

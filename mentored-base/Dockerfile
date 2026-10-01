@@ -4,8 +4,12 @@ ENV LANG=C.UTF-8
 
 RUN apt -qq -y update && \
     apt -qq -y install --no-install-recommends --no-install-suggests \
+    argus-client \
     at \
+    ca-certificates \
     curl \
+    frr \
+    frr-pythontools \
     gawk \
     iperf3 \
     iproute2 \
@@ -16,6 +20,7 @@ RUN apt -qq -y update && \
     kubernetes-client \
     less \
     nano \
+    net-tools \
     procps \
     python3 \
     python3-icmplib \
@@ -24,12 +29,11 @@ RUN apt -qq -y update && \
     python3-setuptools \
     python3-yaml \
     socat \
-    tcpdump && \
+    tcpdump \
+    tshark \
+    ulogd2 \
+    unzip \
+    vim \
+    wget \
+    && \
     apt clean && rm -rf /var/lib/apt/lists/*
-
-
-COPY ./entry.sh /
-COPY ./create_env_from_mentored_ip_list.py /
-COPY ./ping_other_ips.py /
-
-COPY utils/bin/* /usr/local/bin/

@@ -180,6 +180,44 @@ def configure_topology():
 
         run_cmd(["ip", "link", "set", ifname, "up"], check=True)
 
+    # --------------------------------------------------------------------------
+    # 3. PROCESS ROUTES & DEFAULT GATEWAY
+    # --------------------------------------------------------------------------
+    routes = config.get("routes", [])
+
+    # Process single top-level/interface gateway parameter
+    gateway = config.get("gateway")
+    if gateway:
+        first_iface = vxlan_list[0].get("interface", vxlan_list[0].get("name", "net1")) if vxlan_list else None
+        routes.append({
+            "to": "default",
+            "via": gateway,
+            "dev": first_iface,
+            "onlink": config.get("onlink", True),
+            "metric": config.get("metric")
+        })
+
+    for r in routes:
+        dst = r.get("to") or r.get("dst") or "default"
+        gw = r.get("via") or r.get("gw") or r.get("gateway")
+        dev = r.get("dev")
+        metric = r.get("metric")
+        onlink = r.get("onlink", False)
+
+        cmd_route = ["ip", "route", "replace", dst]
+
+        if gw:
+            cmd_route.extend(["via", gw])
+        if dev:
+            cmd_route.extend(["dev", dev])
+        if metric is not None:
+            cmd_route.extend(["metric", str(metric)])
+        if onlink:
+            cmd_route.append("onlink")
+
+        print(f"[Route Setup] Adding route to {dst} via {gw or 'device'}", flush=True)
+        run_cmd(cmd_route, check=False)
+
     socket.setdefaulttimeout(None)
 
 
