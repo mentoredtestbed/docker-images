@@ -1,14 +1,16 @@
 ARG BASE_REPO=ghcr.io/mentoredtestbed/
 ARG BASE_IMAGE=mentored-base
 ARG BASE_IMAGE_TAG=latest
+
+# Intermediate stage to get mentored-base-utils
+FROM $BASE_REPO'mentored-base-utils':$BASE_IMAGE_TAG AS utils
+
+# Main image
 FROM $BASE_REPO$BASE_IMAGE:$BASE_IMAGE_TAG
 
-RUN apt update && apt install -y --no-install-recommends \
-    iputils-ping \
-    python3 \
+# Install packages not in mentored-base (iputils-ping, python3, wget, ca-certificates are already in mentored-base)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    wget \
-    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # To make this device vulnerable to Mirai, we need a telnet server and the busybox shell.
@@ -24,6 +26,10 @@ COPY street_london_rainy_night-720p-15fps-noaudio.mp4 /video.mp4
 COPY ip_camera.py /ip_camera.py
 COPY ./CREDITS /
 RUN chmod +x /ip_camera.py
+
+# Copy mentored utilities from mentored-base-utils image
+COPY --from=utils /entry.sh /
+COPY --from=utils /usr/local/bin/* /usr/local/bin/
 
 # ffmpeg
 # -an      : remove audio
