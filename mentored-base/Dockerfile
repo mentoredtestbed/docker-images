@@ -18,6 +18,7 @@ RUN apt -qq -y update && \
     iputils-tracepath \
     jq \
     kubernetes-client \
+    ldnsutils \
     less \
     nano \
     net-tools \

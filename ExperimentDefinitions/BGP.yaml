@@ -1,0 +1,281 @@
+Experiment:
+  name: BGP-Highjacking
+  topology:
+    links:
+      - id: reactflow__edge-server-http-0-client-http-a-1
+        source: dummy-a
+        target: dummy-b
+        interaction: network
+  nodeactors:
+    - name: dummy-a
+      replicas: 1
+      containers:
+        - name: server
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - sleep
+            - infinity
+      region: ufpe-master-vm1
+    - name: dummy-b
+      replicas: 1
+      containers:
+        - name: client
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - sleep
+            - infinity
+      region: ufpe-master-vm1
+# ==========================================================================
+    # 1. CORE ROUTER (AS 65000)
+    # ==========================================================================
+    - name: router-core
+      replicas: 1
+      region: ufpe-master-vm1
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "bridges": [
+                    {
+                      "name": "br-lan1",
+                      "ip": "10.10.0.1/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "interfaces": [
+                    {
+                      "interface": "vxlan200",
+                      "vni": 200,
+                      "bridge": "br-lan1",
+                      "remote_host": "router-legit"
+                    },
+                    {
+                      "interface": "vxlan201",
+                      "vni": 201,
+                      "bridge": "br-lan1",
+                      "remote_host": "router-attacker"
+                    }
+                  ]
+                }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                frr version 8.5
+                frr defaults traditional
+                hostname router-core
+                log syslog informational
+
+                router bgp 65000
+                bgp router-id 10.10.0.1
+                no bgp ebgp-requires-policy
+                neighbor 10.10.0.2 remote-as 65001
+                neighbor 10.10.0.2 description router-legit
+                neighbor 10.10.0.3 remote-as 65002
+                neighbor 10.10.0.3 description router-attacker
+                
+                address-family ipv4 unicast
+                  neighbor 10.10.0.2 activate
+                  neighbor 10.10.0.3 activate
+                exit-address-family
+
+    # ==========================================================================
+    # 2. LEGITIMATE SERVICE OWNER (AS 65001)
+    # ==========================================================================
+    - name: router-legit
+      replicas: 1
+      region: ufpe-master-vm1
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "interface": "net1",
+                  "ip": "10.10.0.2/24",
+                  "mtu": 1280,
+                  "vni": 200,
+                  "remote_host": "router-core"
+                }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                frr version 8.5
+                frr defaults traditional
+                hostname router-legit
+                log syslog informational
+
+                router bgp 65001
+                bgp router-id 10.10.0.2
+                no bgp ebgp-requires-policy
+                neighbor 10.10.0.1 remote-as 65000
+                neighbor 10.10.0.1 description router-core
+                
+                address-family ipv4 unicast
+                  neighbor 10.10.0.1 activate
+                  network 192.168.100.0/24
+                exit-address-family
+
+    # ==========================================================================
+    # 3. ATTACKER ROUTER (AS 65002) - Pre-configured to execute Subnet Hijack
+    # ==========================================================================
+    - name: router-attacker
+      replicas: 1
+      region: ufpe-master-vm1
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "interface": "net1",
+                  "ip": "10.10.0.3/24",
+                  "mtu": 1280,
+                  "vni": 201,
+                  "remote_host": "router-core"
+                }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                frr version 8.5
+                frr defaults traditional
+                hostname router-attacker
+                log syslog informational
+
+                ip route 192.168.100.0/25 Null0
+
+                router bgp 65002
+                bgp router-id 10.10.0.3
+                no bgp ebgp-requires-policy
+                neighbor 10.10.0.1 remote-as 65000
+                neighbor 10.10.0.1 description router-core
+                
+                address-family ipv4 unicast
+                  neighbor 10.10.0.1 activate
+                  network 192.168.100.0/25
+                exit-address-family
+  drawing:
+    nodes:
+      - id: server-http-0
+        label: server-http
+        position:
+          x: 200
+          'y': 120
+        data:
+          label: server-http
+          actor:
+            - name: server
+              image: ghcr.io/khalilsantana/mentored-base:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - sleep
+                - infinity
+              env:
+                - name: MENTORED_TOPOLOGY_CONFIG
+                  value: |-
+                    {
+                      "bridges": [
+                        {
+                          "name": "br-lan1",
+                          "ip": "10.10.0.1/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "interfaces": [
+                        {
+                          "interface": "vxlan200",
+                          "vni": 200,
+                          "bridge": "br-lan1",
+                          "remote_host": "client-http-a"
+                        },
+                        {
+                          "interface": "vxlan201",
+                          "vni": 200,
+                          "bridge": "br-lan1",
+                          "remote_host": "client-http-b"
+                        }
+                      ]
+                    }
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-a-1
+        label: client-http-a
+        position:
+          x: 414
+          'y': 0
+        data:
+          label: client-http-a
+          actor:
+            - name: client
+              image: ghcr.io/khalilsantana/mentored-base:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - sleep
+                - infinity
+              env:
+                - name: MENTORED_TOPOLOGY_CONFIG
+                  value: |-
+                    {
+                      "interface": "net1",
+                      "ip": "10.10.0.2/24",
+                      "mtu": 1280,
+                      "remote_host": "server-http"
+                    }
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-b-2
+        label: client-http-b
+        position:
+          x: 481
+          'y': 159
+        data:
+          label: client-http-b
+          actor:
+            - name: client
+              image: ghcr.io/khalilsantana/mentored-base:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - sleep
+                - infinity
+              env:
+                - name: MENTORED_TOPOLOGY_CONFIG
+                  value: |-
+                    {
+                      "interface": "net1",
+                      "ip": "10.10.0.3/24",
+                      "mtu": 1280,
+                      "remote_host": "server-http"
+                    }
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom

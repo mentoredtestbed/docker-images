@@ -1,0 +1,235 @@
+Experiment:
+  name: exemplo_mentored_simples
+  topology:
+    links:
+      - id: reactflow__edge-node-a-0-node-g-6
+        source: node-a
+        target: node-g
+        interaction: network
+      - id: reactflow__edge-node-a-0-node-f-5
+        source: node-a
+        target: node-f
+        interaction: network
+      - id: reactflow__edge-node-a-0-node-h-7
+        source: node-a
+        target: node-h
+        interaction: network
+      - id: reactflow__edge-node-a-0-node-b-1
+        source: node-a
+        target: node-b
+        interaction: network
+      - id: reactflow__edge-node-a-0-node-c-2
+        source: node-a
+        target: node-c
+        interaction: network
+      - id: reactflow__edge-node-a-0-node-e-4
+        source: node-a
+        target: node-e
+        interaction: network
+      - id: reactflow__edge-node-a-0-node-i-8
+        source: node-a
+        target: node-i
+        interaction: network
+  nodeactors:
+    - name: node-a
+      replicas: 1
+      containers:
+        - name: node
+          image: ghcr.io/mentoredtestbed/mentored-base:latest
+          command:
+            - sleep
+            - '10000'
+      region: ids-es
+    - name: node-b
+      replicas: 1
+      containers:
+        - name: node
+          image: ghcr.io/mentoredtestbed/mentored-base:latest
+          command:
+            - sleep
+            - '10000'
+      region: ids-go
+    - name: node-c
+      replicas: 1
+      containers:
+        - name: node
+          image: ghcr.io/mentoredtestbed/mentored-base:latest
+          command:
+            - sleep
+            - '10000'
+      region: ids-mg
+    - name: node-e
+      replicas: 1
+      containers:
+        - name: node
+          image: ghcr.io/mentoredtestbed/mentored-base:latest
+          command:
+            - sleep
+            - '10000'
+      region: ids-pe
+    - name: node-f
+      replicas: 1
+      containers:
+        - name: node
+          image: ghcr.io/mentoredtestbed/mentored-base:latest
+          command:
+            - sleep
+            - '10000'
+      region: ids-rn
+    - name: node-g
+      replicas: 1
+      containers:
+        - name: node
+          image: ghcr.io/mentoredtestbed/mentored-base:latest
+          command:
+            - sleep
+            - '10000'
+      region: ids-rs
+    - name: node-h
+      replicas: 1
+      containers:
+        - name: node
+          image: ghcr.io/mentoredtestbed/mentored-base:latest
+          command:
+            - sleep
+            - '10000'
+      region: whx-ba
+    - name: node-i
+      replicas: 1
+      containers:
+        - name: node
+          image: ghcr.io/mentoredtestbed/mentored-base:latest
+          command:
+            - sleep
+            - '10000'
+      region: whx-rn
+  drawing:
+    nodes:
+      - id: node-a-0
+        label: node-a
+        position:
+          x: 88
+          'y': 7
+        data:
+          label: node-a
+          actor:
+            - name: node
+              image: ghcr.io/mentoredtestbed/mentored-base:latest
+              command:
+                - sleep
+                - '10000'
+          replicas: 1
+          region: ids-es
+          nodeType: custom
+      - id: node-b-1
+        label: node-b
+        position:
+          x: 275
+          'y': 337
+        data:
+          label: node-b
+          actor:
+            - name: node
+              image: ghcr.io/mentoredtestbed/mentored-base:latest
+              command:
+                - sleep
+                - '10000'
+          replicas: 1
+          region: ids-go
+          nodeType: custom
+      - id: node-c-2
+        label: node-c
+        position:
+          x: 273
+          'y': 438
+        data:
+          label: node-c
+          actor:
+            - name: node
+              image: ghcr.io/mentoredtestbed/mentored-base:latest
+              command:
+                - sleep
+                - '10000'
+          replicas: 1
+          region: ids-mg
+          nodeType: custom
+      - id: node-e-3
+        label: node-e
+        position:
+          x: 274.63757832132694
+          'y': 530.0268472372823
+        data:
+          label: node-e
+          actor:
+            - name: node
+              image: ghcr.io/mentoredtestbed/mentored-base:latest
+              command:
+                - sleep
+                - '10000'
+          replicas: 1
+          region: ids-pe
+          nodeType: custom
+      - id: node-f-4
+        label: node-f
+        position:
+          x: 284
+          'y': 117
+        data:
+          label: node-f
+          actor:
+            - name: node
+              image: ghcr.io/mentoredtestbed/mentored-base:latest
+              command:
+                - sleep
+                - '10000'
+          replicas: 1
+          region: ids-rn
+          nodeType: custom
+      - id: node-g-5
+        label: node-g
+        position:
+          x: 278.1927691526331
+          'y': 25.13045075353
+        data:
+          label: node-g
+          actor:
+            - name: node
+              image: ghcr.io/mentoredtestbed/mentored-base:latest
+              command:
+                - sleep
+                - '10000'
+          replicas: 1
+          region: ids-rs
+          nodeType: custom
+      - id: node-h-6
+        label: node-h
+        position:
+          x: 277
+          'y': 229
+        data:
+          label: node-h
+          actor:
+            - name: node
+              image: ghcr.io/mentoredtestbed/mentored-base:latest
+              command:
+                - sleep
+                - '10000'
+          replicas: 1
+          region: whx-ba
+          nodeType: custom
+      - id: node-i-7
+        label: node-i
+        position:
+          x: 282.8754687397927
+          'y': -72.07476535124687
+        data:
+          label: node-i
+          actor:
+            - name: node
+              image: ghcr.io/mentoredtestbed/mentored-base:latest
+              command:
+                - sleep
+                - '10000'
+          replicas: 1
+          region: whx-rn
+          nodeType: custom

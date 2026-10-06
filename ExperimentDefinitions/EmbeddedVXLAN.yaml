@@ -1,0 +1,200 @@
+Experiment:
+  name: exemplo_mentored_simples
+  topology:
+    links:
+      - id: reactflow__edge-client-http-a-1-client-http-b-2
+        source: client-http-a
+        target: client-http-b
+        interaction: network
+      - id: reactflow__edge-server-http-0-client-http-a-1
+        source: server-http
+        target: client-http-a
+        interaction: network
+  nodeactors:
+    - name: server-http
+      replicas: 1
+      containers:
+        - name: server
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - sleep
+            - infinity
+          securityContext:
+            privileged: true
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "bridges": [
+                    {
+                      "name": "br-lan1",
+                      "ip": "10.10.0.1/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "interfaces": [
+                    {
+                      "interface": "vxlan200",
+                      "vni": 200,
+                      "bridge": "br-lan1",
+                      "remote_host": "client-http-a"
+                    },
+                    {
+                      "interface": "vxlan201",
+                      "vni": 201,
+                      "bridge": "br-lan1",
+                      "remote_host": "client-http-b"
+                    }
+                  ]
+                }
+      region: ufpe-master-vm1
+    - name: client-http-a
+      replicas: 1
+      containers:
+        - name: client
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - sleep
+            - infinity
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "interface": "net1",
+                  "ip": "10.10.0.2/24",
+                  "mtu": 1280,
+                  "vni": 200,
+                  "remote_host": "server-http"
+                }
+      region: ufpe-master-vm1
+    - name: client-http-b
+      replicas: 1
+      containers:
+        - name: client
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - sleep
+            - infinity
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "interface": "net1",
+                  "ip": "10.10.0.3/24",
+                  "mtu": 1280,
+                  "vni": 201,
+                  "remote_host": "server-http"
+                }
+      region: ufpe-master-vm1
+  drawing:
+    nodes:
+      - id: server-http-0
+        label: server-http
+        position:
+          x: 200
+          'y': 120
+        data:
+          label: server-http
+          actor:
+            - name: server
+              image: ghcr.io/khalilsantana/mentored-base:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - sleep
+                - infinity
+              env:
+                - name: MENTORED_TOPOLOGY_CONFIG
+                  value: |-
+                    {
+                      "bridges": [
+                        {
+                          "name": "br-lan1",
+                          "ip": "10.10.0.1/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "interfaces": [
+                        {
+                          "interface": "vxlan200",
+                          "vni": 200,
+                          "bridge": "br-lan1",
+                          "remote_host": "client-http-a"
+                        },
+                        {
+                          "interface": "vxlan201",
+                          "vni": 200,
+                          "bridge": "br-lan1",
+                          "remote_host": "client-http-b"
+                        }
+                      ]
+                    }
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-a-1
+        label: client-http-a
+        position:
+          x: 414
+          'y': 0
+        data:
+          label: client-http-a
+          actor:
+            - name: client
+              image: ghcr.io/khalilsantana/mentored-base:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - sleep
+                - infinity
+              env:
+                - name: MENTORED_TOPOLOGY_CONFIG
+                  value: |-
+                    {
+                      "interface": "net1",
+                      "ip": "10.10.0.2/24",
+                      "mtu": 1280,
+                      "remote_host": "server-http"
+                    }
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-b-2
+        label: client-http-b
+        position:
+          x: 481
+          'y': 159
+        data:
+          label: client-http-b
+          actor:
+            - name: client
+              image: ghcr.io/khalilsantana/mentored-base:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - sleep
+                - infinity
+              env:
+                - name: MENTORED_TOPOLOGY_CONFIG
+                  value: |-
+                    {
+                      "interface": "net1",
+                      "ip": "10.10.0.3/24",
+                      "mtu": 1280,
+                      "remote_host": "server-http"
+                    }
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom

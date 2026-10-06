@@ -18,6 +18,49 @@ def run_cmd(cmd, check=False):
     return res
 
 
+def configure_pod_cidr_route(config):
+    """Adds an explicit subnet route for the Kubernetes Pod network via eth0
+
+    gateway.
+
+    This guarantees VXLAN underlay packets always travel over eth0, regardless
+    of default route settings on overlay interfaces (net1).
+    """
+    # Determine Pod CIDR from config or env variable (defaults to 10.244.0.0/16)
+    pod_cidr = (
+        config.get("cluster_pod_cidr")
+        or os.environ.get("CLUSTER_POD_CIDR")
+        or "10.244.0.0/16"
+    )
+
+    # Detect eth0 gateway
+    res = run_cmd(["ip", "route", "show", "default", "dev", "eth0"], check=False)
+    lines = res.stdout.strip().splitlines()
+    cni_gw = None
+    for line in lines:
+        parts = line.split()
+        if "via" in parts:
+            cni_gw = parts[parts.index("via") + 1]
+            break
+
+    if not cni_gw:
+        print(
+            "[Pod CIDR Route] Could not determine eth0 default gateway. Skipping static route.",
+            flush=True,
+        )
+        return
+
+    print(
+        f"[Pod CIDR Route] Setting explicit underlay route: {pod_cidr} via {cni_gw} dev eth0",
+        flush=True,
+    )
+    # Add explicit high-priority route for cluster pod traffic
+    run_cmd(
+        ["ip", "route", "replace", pod_cidr, "via", cni_gw, "dev", "eth0"],
+        check=False,
+    )
+
+
 def configure_topology():
     config_raw = os.environ.get("MENTORED_TOPOLOGY_CONFIG", "{}")
     if not config_raw or config_raw == "{}":
@@ -42,6 +85,11 @@ def configure_topology():
     socket.setdefaulttimeout(5.0)
 
     # --------------------------------------------------------------------------
+    # 0. ENSURE CLUSTER POD UNDERLAY ROUTING
+    # --------------------------------------------------------------------------
+    configure_pod_cidr_route(config)
+
+    # --------------------------------------------------------------------------
     # 1. PROCESS BRIDGES
     # --------------------------------------------------------------------------
     bridges = config.get("bridges", [])
@@ -56,16 +104,34 @@ def configure_topology():
         res = run_cmd(["ip", "link", "show", br_name])
         if res.returncode != 0:
             print(f"[Bridge Setup] Creating bridge {br_name}", flush=True)
-            run_cmd(["ip", "link", "add", "name", br_name, "type", "bridge"], check=True)
+            run_cmd(
+                ["ip", "link", "add", "name", br_name, "type", "bridge"],
+                check=True,
+            )
 
         # Set forward_delay to 0 so ports go to FORWARDING state immediately
-        run_cmd(["ip", "link", "set", "dev", br_name, "type", "bridge", "forward_delay", "0", "stp_state", "0"])
+        run_cmd([
+            "ip",
+            "link",
+            "set",
+            "dev",
+            br_name,
+            "type",
+            "bridge",
+            "forward_delay",
+            "0",
+            "stp_state",
+            "0",
+        ])
 
         if br_mtu:
             run_cmd(["ip", "link", "set", "dev", br_name, "mtu", str(br_mtu)])
 
         if br_ip:
-            print(f"[Bridge Setup] Assigning IP {br_ip} to bridge {br_name}", flush=True)
+            print(
+                f"[Bridge Setup] Assigning IP {br_ip} to bridge {br_name}",
+                flush=True,
+            )
             run_cmd(["ip", "addr", "add", br_ip, "dev", br_name])
 
         run_cmd(["ip", "link", "set", br_name, "up"], check=True)
@@ -85,8 +151,7 @@ def configure_topology():
 
     for idx, vx in enumerate(vxlan_list):
         ifname = vx.get("interface", vx.get("name", f"vxlan{idx}"))
-        
-        # Determine unique VNI per interface
+
         requested_vni = vx.get("vni")
         if requested_vni is not None and int(requested_vni) not in used_vnis:
             vni = int(requested_vni)
@@ -135,7 +200,7 @@ def configure_topology():
             )
             continue
 
-        # Create Point-to-Point VXLAN link with unique VNI
+        # Create Point-to-Point VXLAN link
         res = run_cmd(["ip", "link", "show", ifname])
         if res.returncode != 0:
             print(
@@ -143,13 +208,21 @@ def configure_topology():
                 flush=True,
             )
             cmd_create = [
-                "ip", "link", "add", ifname,
-                "type", "vxlan",
-                "id", str(vni),
-                "dev", underlay_dev,
-                "dstport", link_dstport,
-                "remote", remote_ip,
-                "learning"
+                "ip",
+                "link",
+                "add",
+                ifname,
+                "type",
+                "vxlan",
+                "id",
+                str(vni),
+                "dev",
+                underlay_dev,
+                "dstport",
+                link_dstport,
+                "remote",
+                remote_ip,
+                "learning",
             ]
             run_cmd(cmd_create, check=True)
 
@@ -164,16 +237,55 @@ def configure_topology():
                     f"[VXLAN Setup] Creating master bridge {master_bridge} for slave {ifname}",
                     flush=True,
                 )
-                run_cmd(["ip", "link", "add", "name", master_bridge, "type", "bridge"], check=True)
-                run_cmd(["ip", "link", "set", "dev", master_bridge, "type", "bridge", "forward_delay", "0", "stp_state", "0"])
+                run_cmd(
+                    [
+                        "ip",
+                        "link",
+                        "add",
+                        "name",
+                        master_bridge,
+                        "type",
+                        "bridge",
+                    ],
+                    check=True,
+                )
+                run_cmd([
+                    "ip",
+                    "link",
+                    "set",
+                    "dev",
+                    master_bridge,
+                    "type",
+                    "bridge",
+                    "forward_delay",
+                    "0",
+                    "stp_state",
+                    "0",
+                ])
                 run_cmd(["ip", "link", "set", master_bridge, "up"], check=True)
 
             print(
                 f"[VXLAN Setup] Slaving {ifname} to bridge {master_bridge}",
                 flush=True,
             )
-            run_cmd(["ip", "link", "set", ifname, "master", master_bridge], check=True)
-            run_cmd(["bridge", "link", "set", "dev", ifname, "learning", "on", "flood", "on"], check=False)
+            run_cmd(
+                ["ip", "link", "set", ifname, "master", master_bridge],
+                check=True,
+            )
+            run_cmd(
+                [
+                    "bridge",
+                    "link",
+                    "set",
+                    "dev",
+                    ifname,
+                    "learning",
+                    "on",
+                    "flood",
+                    "on",
+                ],
+                check=False,
+            )
         else:
             if ip:
                 run_cmd(["ip", "addr", "add", ip, "dev", ifname])
@@ -181,24 +293,20 @@ def configure_topology():
         run_cmd(["ip", "link", "set", ifname, "up"], check=True)
 
     # --------------------------------------------------------------------------
-    # 3. PROCESS ROUTES & DEFAULT GATEWAY
+    # 3. PROCESS CUSTOM ROUTES
     # --------------------------------------------------------------------------
+    # Flush default routes on eth0 so the custom experiment default routes win
+    while True:
+        res = run_cmd(["ip", "route", "del", "default", "dev", "eth0"])
+        if res.returncode != 0:
+            break
+
     routes = config.get("routes", [])
-
-    # Process single top-level/interface gateway parameter
-    gateway = config.get("gateway")
-    if gateway:
-        first_iface = vxlan_list[0].get("interface", vxlan_list[0].get("name", "net1")) if vxlan_list else None
-        routes.append({
-            "to": "default",
-            "via": gateway,
-            "dev": first_iface,
-            "onlink": config.get("onlink", True),
-            "metric": config.get("metric")
-        })
-
     for r in routes:
-        dst = r.get("to") or r.get("dst") or "default"
+        dst = r.get("to") or r.get("dst")
+        if not dst:
+            continue
+
         gw = r.get("via") or r.get("gw") or r.get("gateway")
         dev = r.get("dev")
         metric = r.get("metric")
@@ -215,7 +323,10 @@ def configure_topology():
         if onlink:
             cmd_route.append("onlink")
 
-        print(f"[Route Setup] Adding route to {dst} via {gw or 'device'}", flush=True)
+        print(
+            f"[Route Setup] Adding route: {' '.join(cmd_route)}",
+            flush=True,
+        )
         run_cmd(cmd_route, check=False)
 
     socket.setdefaulttimeout(None)

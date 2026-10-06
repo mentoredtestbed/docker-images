@@ -1,4 +1,5 @@
 ARG BASE_REPO=ghcr.io/mentoredtestbed/
+ARG BASE_IMAGE=mentored-base
 ARG BASE_IMAGE_TAG=latest
 
 # Stage 1: Build the SSL certificate using OpenSSL
@@ -29,10 +30,14 @@ RUN openssl req -new -x509 -key ${PRIVATE_KEY_DIR}/${CERT_NAME}.key \
   -days 365 \
   -subj "/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORG}/CN=${CN}"
 
+# Intermediate stage to get mentored-base-utils
+FROM $BASE_REPO'mentored-base-utils':$BASE_IMAGE_TAG AS utils
 
+# Stage 2: Main image with mentored-base
+FROM $BASE_REPO$BASE_IMAGE:$BASE_IMAGE_TAG
 
-
-FROM $BASE_REPO"nginx-simple":$BASE_IMAGE_TAG
+# Install nginx (previously from nginx-simple)
+RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
 
 # Copy the SSL certificate and key from the builder stage
 COPY --from=builder /etc/ssl/certs/server.crt /etc/ssl/certs/
@@ -43,6 +48,10 @@ RUN mkdir -p /etc/nginx/conf.d
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY nginx.reverseproxy.conf /etc/nginx/nginx.reverseproxy.conf.disabled
 COPY setup-reverse-proxy.sh /usr/local/bin/setup-reverse-proxy.sh
+
+# Copy mentored utilities from mentored-base-utils image
+COPY --from=utils /entry.sh /
+COPY --from=utils /usr/local/bin/* /usr/local/bin/
 
 # Expose HTTPS port
 EXPOSE 443

@@ -57,14 +57,7 @@ cp /MENTORED_READY /app/results/MENTORED_READY
 if [[ -f "/MENTORED_IP_LIST.json" ]]
 then
     python3 /usr/local/bin/create_env_from_mentored_ip_list.py /MENTORED_IP_LIST.json $SERVER_NA_NAME $MENTORED_EXP_IFNAME SERVER /MENTORED_ENV.source
-
-    if [ -z "$MENTORED_DNS" ] || [ "$MENTORED_DNS" == "/etc/hosts" ]; then
-        echo "MENTORED_DNS is not set or set to /etc/hosts, setting up /etc/hosts"
-        /usr/local/bin/setup_etc_hosts.py
-    elif [ "$MENTORED_DNS" == "pod-dns" ]; then
-        echo "MENTORED_DNS is set to pod-dns, using MENTORED_DNS_NA as the DNS server..."
-        /usr/local/bin/use_na_as_dns_server.py $MENTORED_DNS_NA
-    fi
+    /usr/local/bin/setup_etc_hosts.py
 
     if [ ! -f /MENTORED_ENV.source ]; then
         touch /MENTORED_ENV.source
@@ -81,6 +74,14 @@ fi
 if [ -n "$MENTORED_TOPOLOGY_CONFIG" ]; then
     echo "[Topology Setup] Executing setup-topology.py..."
     python3 /usr/local/bin/setup-topology.py
+fi
+
+# Create DNS overrides:
+if [ -n "$MENTORED_DNS_NAMESERVERS" ]; then
+    echo "$MENTORED_DNS_NAMESERVERS" > /etc/resolv.conf
+fi
+if [ -n "$MENTORED_DNS_ENV_ENTRIES" ]; then
+    echo "$MENTORED_DNS_ENV_ENTRIES" > /etc/hosts
 fi
 
 # ==============================================================================
@@ -117,7 +118,7 @@ done
 
 sleep $TIME_WAIT_START
 
-CMD_SUFFIX=$SERVER
+CMD_SUFFIX=$SERVER_NA_NAME
 if [ "$ADD_SERVER_IP_TO_COMMAND" == "no" ]; then
     CMD_SUFFIX=""
 fi

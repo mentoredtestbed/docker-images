@@ -1,0 +1,457 @@
+Experiment:
+  name: exemplo_mentored_simples
+  topology:
+    links:
+      - id: reactflow__edge-server-http-0-attacker-http-2
+        source: server-http
+        target: attacker-http
+        interaction: network
+      - id: reactflow__edge-server-http-0-client-http-1
+        source: server-http
+        target: client-http
+        interaction: network
+      - id: reactflow__edge-server-http-0-client-http-a-2
+        source: server-http
+        target: client-http-a
+        interaction: network
+      - id: reactflow__edge-server-http-0-client-http-b-3
+        source: server-http
+        target: client-http-b
+        interaction: network
+      - id: reactflow__edge-server-http-0-client-http-c-4
+        source: server-http
+        target: client-http-c
+        interaction: network
+      - id: reactflow__edge-server-http-0-vuln-ssh-node-1-6
+        source: server-http
+        target: vuln-ssh-node-1
+        interaction: network
+  nodeactors:
+    - name: server-http
+      replicas: 1
+      persistent_volume_path:
+        - /app/results/
+        - /app/results/
+      containers:
+        - name: server
+          image: >-
+            ghcr.io/khalilsantana/generic-apache-flask-webserver:dataset-mentored-iot-2024-v1
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+          ports:
+            - containerPort: 80
+          env:
+            - name: ENABLE_SLOWLORIS_DEFENSE
+              value: 'false'
+        - name: tshark
+          image: ghcr.io/khalilsantana/network-monitor:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - cp /etc/hosts /app/results/hosts
+          securityContext:
+            privileged: true
+          env:
+            - name: SERVER_NA_NAME
+              value: server-http
+            - name: MENTORED_PRE_CMD
+              value: iptables-80-22-tshark.sh
+      region: ufpe-master-vm1
+    - name: client-http
+      replicas: 1
+      containers:
+        - name: client-static
+          image: ghcr.io/khalilsantana/generic-client:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - random-requests.sh
+          env:
+            - name: SERVER_NA_NAME
+              value: server-http
+            - name: TIME_WAIT_START
+              value: '0'
+            - name: TIMEOUT_CMD
+              value: '300'
+            - name: ADD_SERVER_IP_TO_COMMAND
+              value: 'true'
+            - name: MIN_RANDOM
+              value: '1.0'
+            - name: MAX_RANDOM
+              value: '1.0'
+            - name: ADDITIONAL_FLAGS
+              value: '--static_behavior'
+          securityContext:
+            privileged: true
+      region: ufpe-master-vm1
+    - name: client-http-a
+      replicas: 1
+      containers:
+        - name: client-static
+          image: ghcr.io/khalilsantana/generic-client:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - random-requests.sh
+          env:
+            - name: SERVER_NA_NAME
+              value: server-http
+            - name: TIME_WAIT_START
+              value: '0'
+            - name: TIMEOUT_CMD
+              value: '300'
+            - name: ADD_SERVER_IP_TO_COMMAND
+              value: 'true'
+            - name: MIN_RANDOM
+              value: '1.0'
+            - name: MAX_RANDOM
+              value: '1.0'
+            - name: ADDITIONAL_FLAGS
+              value: '--static_behavior'
+          securityContext:
+            privileged: true
+      region: ufpe-master-vm1
+    - name: client-http-b
+      replicas: 1
+      containers:
+        - name: client-static
+          image: ghcr.io/khalilsantana/generic-client:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - random-requests.sh
+          env:
+            - name: SERVER_NA_NAME
+              value: server-http
+            - name: TIME_WAIT_START
+              value: '0'
+            - name: TIMEOUT_CMD
+              value: '300'
+            - name: ADD_SERVER_IP_TO_COMMAND
+              value: 'true'
+            - name: MIN_RANDOM
+              value: '1.0'
+            - name: MAX_RANDOM
+              value: '1.0'
+            - name: ADDITIONAL_FLAGS
+              value: '--static_behavior'
+          securityContext:
+            privileged: true
+      region: ufpe-master-vm1
+    - name: client-http-c
+      replicas: 1
+      containers:
+        - name: client-static
+          image: ghcr.io/khalilsantana/generic-client:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - random-requests.sh
+          env:
+            - name: SERVER_NA_NAME
+              value: server-http
+            - name: TIME_WAIT_START
+              value: '0'
+            - name: TIMEOUT_CMD
+              value: '300'
+            - name: ADD_SERVER_IP_TO_COMMAND
+              value: 'true'
+            - name: MIN_RANDOM
+              value: '1.0'
+            - name: MAX_RANDOM
+              value: '1.0'
+            - name: ADDITIONAL_FLAGS
+              value: '--static_behavior'
+          securityContext:
+            privileged: true
+      region: ufpe-master-vm1
+    - name: attacker-http
+      replicas: 1
+      containers:
+        - name: attacker
+          image: ghcr.io/khalilsantana/generic-botnet:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - mentored-attack
+            - slowloris
+            - server-http
+            - net1
+            - '180'
+            - '80'
+          env:
+            - name: TIME_WAIT_START
+              value: '60'
+            - name: SERVER_NA_NAME
+              value: server-http
+          securityContext:
+            privileged: true
+      region: ufpe-master-vm1
+    - name: vuln-ssh-node-1
+      replicas: 1
+      containers:
+        - name: vulnerable
+          image: >-
+            ghcr.io/khalilsantana/infection-scenario:dataset-mentored-iot-2024-v5
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - ./vulnerable.sh
+          env:
+            - name: TIMEOUT_CMD
+              value: '1000'
+            - name: ADD_SERVER_IP_TO_COMMAND
+              value: 'true'
+            - name: SERVER_NA_NAME
+              value: server-http
+      region: ufpe-master-vm1
+  drawing:
+    nodes:
+      - id: server-http-0
+        label: server-http
+        position:
+          x: 187.03213709940837
+          'y': -279.2874883962181
+        data:
+          label: server-http
+          actor:
+            - name: server
+              image: >-
+                ghcr.io/khalilsantana/generic-apache-flask-webserver:dataset-mentored-iot-2024-v1
+              imagePullPolicy: Always
+              securityContext:
+                privileged: true
+              ports:
+                - containerPort: 80
+              env:
+                - name: ENABLE_SLOWLORIS_DEFENSE
+                  value: 'false'
+            - name: tshark
+              image: ghcr.io/khalilsantana/network-monitor:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - cp /etc/hosts /app/results/hosts
+              securityContext:
+                privileged: true
+              env:
+                - name: SERVER_NA_NAME
+                  value: server-http
+                - name: MENTORED_PRE_CMD
+                  value: iptables-80-22-tshark.sh
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-1
+        label: client-http
+        position:
+          x: 477
+          'y': -280.41318359375003
+        data:
+          label: client-http
+          actor:
+            - name: client-static
+              image: ghcr.io/khalilsantana/generic-client:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - random-requests.sh
+              env:
+                - name: SERVER_NA_NAME
+                  value: server-http
+                - name: TIME_WAIT_START
+                  value: '0'
+                - name: TIMEOUT_CMD
+                  value: '300'
+                - name: ADD_SERVER_IP_TO_COMMAND
+                  value: 'true'
+                - name: MIN_RANDOM
+                  value: '1.0'
+                - name: MAX_RANDOM
+                  value: '1.0'
+                - name: ADDITIONAL_FLAGS
+                  value: '--static_behavior'
+              securityContext:
+                privileged: true
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-a-2
+        label: client-http-a
+        position:
+          x: 469.3484267712387
+          'y': -187.96354410465295
+        data:
+          label: client-http-a
+          actor:
+            - name: client-static
+              image: ghcr.io/khalilsantana/generic-client:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - random-requests.sh
+              env:
+                - name: SERVER_NA_NAME
+                  value: server-http
+                - name: TIME_WAIT_START
+                  value: '0'
+                - name: TIMEOUT_CMD
+                  value: '300'
+                - name: ADD_SERVER_IP_TO_COMMAND
+                  value: 'true'
+                - name: MIN_RANDOM
+                  value: '1.0'
+                - name: MAX_RANDOM
+                  value: '1.0'
+                - name: ADDITIONAL_FLAGS
+                  value: '--static_behavior'
+              securityContext:
+                privileged: true
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-b-3
+        label: client-http-b
+        position:
+          x: 466.4928396325298
+          'y': -102.46608476577944
+        data:
+          label: client-http-b
+          actor:
+            - name: client-static
+              image: ghcr.io/khalilsantana/generic-client:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - random-requests.sh
+              env:
+                - name: SERVER_NA_NAME
+                  value: server-http
+                - name: TIME_WAIT_START
+                  value: '0'
+                - name: TIMEOUT_CMD
+                  value: '300'
+                - name: ADD_SERVER_IP_TO_COMMAND
+                  value: 'true'
+                - name: MIN_RANDOM
+                  value: '1.0'
+                - name: MAX_RANDOM
+                  value: '1.0'
+                - name: ADDITIONAL_FLAGS
+                  value: '--static_behavior'
+              securityContext:
+                privileged: true
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-c-4
+        label: client-http-c
+        position:
+          x: 465.15259815242655
+          'y': -9.773598431420282
+        data:
+          label: client-http-c
+          actor:
+            - name: client-static
+              image: ghcr.io/khalilsantana/generic-client:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - random-requests.sh
+              env:
+                - name: SERVER_NA_NAME
+                  value: server-http
+                - name: TIME_WAIT_START
+                  value: '0'
+                - name: TIMEOUT_CMD
+                  value: '300'
+                - name: ADD_SERVER_IP_TO_COMMAND
+                  value: 'true'
+                - name: MIN_RANDOM
+                  value: '1.0'
+                - name: MAX_RANDOM
+                  value: '1.0'
+                - name: ADDITIONAL_FLAGS
+                  value: '--static_behavior'
+              securityContext:
+                privileged: true
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: attacker-http-5
+        label: attacker-http
+        position:
+          x: 156.79057120855464
+          'y': -154.08691360756688
+        data:
+          label: attacker-http
+          actor:
+            - name: attacker
+              image: ghcr.io/khalilsantana/generic-botnet:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - mentored-attack
+                - slowloris
+                - server-http
+                - net1
+                - '180'
+                - '80'
+              env:
+                - name: TIME_WAIT_START
+                  value: '60'
+                - name: SERVER_NA_NAME
+                  value: server-http
+              securityContext:
+                privileged: true
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: vuln-ssh-node-1-6
+        label: vuln-ssh-node-1
+        position:
+          x: 468.9348582405256
+          'y': -419.3005223934387
+        data:
+          label: vuln-ssh-node-1
+          actor:
+            - name: vulnerable
+              image: >-
+                ghcr.io/khalilsantana/infection-scenario:dataset-mentored-iot-2024-v5
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - ./vulnerable.sh
+              env:
+                - name: TIMEOUT_CMD
+                  value: '1000'
+                - name: ADD_SERVER_IP_TO_COMMAND
+                  value: 'true'
+                - name: SERVER_NA_NAME
+                  value: server-http
+          replicas: 1
+          region: ufpe-master-vm1
+          persistent_volume_path:
+            - /app/results/
+            - /app/results/
+            - /app/results/
+            - /app/results/
+            - /app/results/
+            - /app/results/
+            - /app/results/
+          nodeType: custom

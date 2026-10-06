@@ -1,0 +1,91 @@
+Experiment:
+  name: exemplo_mentored_simples
+  topology:
+    links:
+      - id: reactflow__edge-server-http-0-client-http-1
+        source: server-http
+        target: client-http
+        interaction: network
+  nodeactors:
+    - name: server-http
+      replicas: 1
+      containers:
+        - name: server
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - sleep
+            - infinity
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: >-
+                {
+                  "interface": "net1",
+                  "ip": "10.10.0.1/24",
+                  "mtu": 1280,
+                  "remote_host": "client-http"
+                }
+      region: ufpe-master-vm1
+    - name: client-http
+      replicas: 1
+      containers:
+        - name: client
+          image: ghcr.io/khalilsantana/mentored-base:latest
+          imagePullPolicy: Always
+          command:
+            - /entry.sh
+          args:
+            - sleep
+            - infinity
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: >-
+                {
+                  "interface": "net1",
+                  "ip": "10.20.0.1/24",
+                  "mtu": 1280,
+                  "remote_host": "server-http"
+                }
+      region: ufpe-master-vm1
+  drawing:
+    nodes:
+      - id: server-http-0
+        label: server-http
+        position:
+          x: 200
+          'y': 120
+        data:
+          label: server-http
+          actor:
+            - name: server
+              image: ghcr.io/khalilsantana/mentored-base:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - sleep
+                - infinity
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom
+      - id: client-http-1
+        label: client-http
+        position:
+          x: 507
+          'y': 132
+        data:
+          label: client-http
+          actor:
+            - name: client
+              image: ghcr.io/khalilsantana/mentored-base:latest
+              imagePullPolicy: Always
+              command:
+                - /entry.sh
+              args:
+                - sleep
+                - infinity
+          replicas: 1
+          region: ufpe-master-vm1
+          nodeType: custom

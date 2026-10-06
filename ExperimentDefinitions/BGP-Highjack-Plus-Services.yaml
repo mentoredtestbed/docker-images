@@ -1,0 +1,414 @@
+Experiment:
+  name: bgp_hijack_isp_routers_only_experiment
+
+  nodeactors:
+
+    # --------------------------------------------------------------------------
+    # BGP ROUTERS (ISP BACKBONE & EDGE ROUTERS)
+    # --------------------------------------------------------------------------
+    - name: router-isp-core
+      replicas: 1
+      region: ufpe-master-vm1
+      persistent_volume_path:
+        - /app/results/
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "cluster_pod_cidr": "10.244.0.0/16",
+                  "bridges": [
+                    {
+                      "name": "br-isp",
+                      "ip": "10.10.0.1/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "interfaces": [
+                    {
+                      "interface": "vxlan100",
+                      "vni": 100,
+                      "bridge": "br-isp",
+                      "remote_host": "router-office"
+                    },
+                    {
+                      "interface": "vxlan101",
+                      "vni": 101,
+                      "bridge": "br-isp",
+                      "remote_host": "router-attacker"
+                    },
+                    {
+                      "interface": "vxlan102",
+                      "vni": 102,
+                      "bridge": "br-isp",
+                      "remote_host": "router-home"
+                    },
+                    {
+                      "interface": "vxlan103",
+                      "vni": 103,
+                      "bridge": "br-isp",
+                      "remote_host": "dns-server"
+                    }
+                  ]
+                }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                frr version 8.5
+                frr defaults traditional
+                hostname router-isp-core
+                log syslog informational
+                
+                router bgp 65000
+                 bgp router-id 10.10.0.1
+                 no bgp ebgp-requires-policy
+                 neighbor 10.10.0.2 remote-as 65001
+                 neighbor 10.10.0.2 description router-office
+                 neighbor 10.10.0.3 remote-as 65002
+                 neighbor 10.10.0.3 description router-attacker
+                 neighbor 10.10.0.4 remote-as 65003
+                 neighbor 10.10.0.4 description router-home
+                 
+                address-family ipv4 unicast
+                  neighbor 10.10.0.2 activate
+                  # This below next-hop-self to re-write the next-hop if we want
+                  # neighbor 10.10.0.2 next-hop-self
+                  neighbor 10.10.0.3 activate
+                  # neighbor 10.10.0.3 next-hop-self
+                  neighbor 10.10.0.4 activate
+                  # neighbor 10.10.0.4 next-hop-self
+                exit-address-family
+
+    - name: router-office
+      replicas: 1
+      persistent_volume_path:
+        - /app/results/
+      region: ufpe-master-vm1
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "cluster_pod_cidr": "10.244.0.0/16",
+                  "bridges": [
+                    {
+                      "name": "br-isp",
+                      "ip": "10.10.0.2/24",
+                      "mtu": 1280
+                    },
+                    {
+                      "name": "br-off-lan",
+                      "ip": "192.168.100.1/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "interfaces": [
+                    {
+                      "interface": "vxlan100",
+                      "vni": 100,
+                      "bridge": "br-isp",
+                      "remote_host": "router-isp-core"
+                    },
+                    {
+                      "interface": "vxlan101",
+                      "vni": 101,
+                      "bridge": "br-off-lan",
+                      "remote_host": "server-http"
+                    }
+                  ]
+                }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                frr version 8.5
+                frr defaults traditional
+                hostname router-office
+                log syslog informational
+                
+                router bgp 65001
+                 bgp router-id 10.10.0.2
+                 no bgp ebgp-requires-policy
+                 neighbor 10.10.0.1 remote-as 65000
+                 neighbor 10.10.0.1 description router-isp-core
+                 
+                 address-family ipv4 unicast
+                  neighbor 10.10.0.1 activate
+                  network 192.168.100.0/24
+                 exit-address-family
+
+    - name: router-attacker
+      replicas: 1
+      persistent_volume_path:
+        - /app/results/
+      region: ufpe-master-vm2
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "cluster_pod_cidr": "10.244.0.0/16",
+                  "bridges": [
+                    {
+                      "name": "br-isp",
+                      "ip": "10.10.0.3/24",
+                      "mtu": 1280
+                    },
+                    {
+                      "name": "br-atk-lan",
+                      "ip": "10.200.0.1/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "interfaces": [
+                    {
+                      "interface": "vxlan101",
+                      "vni": 101,
+                      "bridge": "br-isp",
+                      "remote_host": "router-isp-core"
+                    }
+                  ]
+                }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                frr version 8.5
+                frr defaults traditional
+                hostname router-attacker
+                log syslog informational
+                
+                # Directly bind the hijacked prefix to a Dummy interface so the router answers pings directly
+                # interface dummy0
+                #  ip address 192.168.100.1/25
+                # exit
+                
+                router bgp 65002
+                 bgp router-id 10.10.0.3
+                 no bgp ebgp-requires-policy
+                 neighbor 10.10.0.1 remote-as 65000
+                 neighbor 10.10.0.1 description router-isp-core
+                 
+                 address-family ipv4 unicast
+                  neighbor 10.10.0.1 activate
+                  # network 192.168.100.0/25
+                 exit-address-family
+
+    - name: router-home
+      persistent_volume_path:
+        - /app/results/
+      replicas: 1
+      region: ufpe-master-vm2
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "cluster_pod_cidr": "10.244.0.0/16",
+                  "bridges": [
+                    {
+                      "name": "br-isp",
+                      "ip": "10.10.0.4/24",
+                      "mtu": 1280
+                    },
+                    {
+                      "name": "br-home-lan",
+                      "ip": "192.168.200.1/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "interfaces": [
+                    {
+                      "interface": "vxlan102",
+                      "vni": 102,
+                      "bridge": "br-isp",
+                      "remote_host": "router-isp-core"
+                    },
+                    {
+                      "interface": "vxlan103",
+                      "vni": 103,
+                      "bridge": "br-home-lan",
+                      "remote_host": "client-home"
+                    }
+                  ]
+                }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                frr version 8.5
+                frr defaults traditional
+                hostname router-home
+                log syslog informational
+                
+                router bgp 65003
+                 bgp router-id 10.10.0.4
+                 no bgp ebgp-requires-policy
+                 neighbor 10.10.0.1 remote-as 65000
+                 neighbor 10.10.0.1 description router-isp-core
+                 
+                 address-family ipv4 unicast
+                  neighbor 10.10.0.1 activate
+                  network 192.168.200.0/24
+                 exit-address-family
+
+    - name: client-home
+      persistent_volume_path:
+        - /app/results/
+      replicas: 1
+      region: ufpe-master-vm2
+      containers:
+        - name: client
+          image: ghcr.io/khalilsantana/generic-client:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["random-requests.sh", "server-http"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_DNS_NAMESERVERS
+              value: "nameserver 10.10.0.5"
+            - name: MENTORED_DNS_ENV_ENTRIES
+              value: |-
+                # Kubernetes-managed hosts file.
+                127.0.0.1       localhost
+                ::1     localhost ip6-localhost ip6-loopback
+                fe00::0 ip6-localnet
+                fe00::0 ip6-mcastprefix
+                fe00::1 ip6-allnodes
+                fe00::2 ip6-allrouters
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "cluster_pod_cidr": "10.244.0.0/16",
+                  "interfaces": [
+                    {
+                      "interface": "home-lan",
+                      "vni": 103,
+                      "remote_host": "router-home",
+                      "ip": "192.168.200.10/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "routes": [
+                    {
+                      "to": "default",
+                      "via": "192.168.200.1",
+                      "dev": "home-lan",
+                      "onlink": true
+                    }
+                  ]
+                }
+
+    - name: server-http
+      persistent_volume_path:
+        - /app/results/
+      replicas: 1
+      region: ufpe-master-vm1
+      containers:
+        - name: server-http
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "cluster_pod_cidr": "10.244.0.0/16",
+                  "interfaces": [
+                    {
+                      "interface": "office-lan",
+                      "vni": 101,
+                      "remote_host": "router-office",
+                      "ip": "192.168.100.10/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "routes": [
+                    {
+                      "to": "default",
+                      "via": "192.168.100.1",
+                      "dev": "office-lan",
+                      "onlink": true
+                    }
+                  ]
+                }
+        - name: nginx
+          image: ghcr.io/khalilsantana/nginx-simple-ssl:latest
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+
+    - name: dns-server
+      persistent_volume_path:
+        - /app/results/
+      replicas: 1
+      region: ufpe-master-vm1
+      containers:
+        - name: dnsmasq
+          image: ghcr.io/khalilsantana/mentored-dnsmasq:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["dnsmasq", "--no-daemon"]
+          env:
+            - name: MENTORED_DNS_ENV_ENTRIES
+              value: |-
+                192.168.100.10 server-http
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                {
+                  "cluster_pod_cidr": "10.244.0.0/16",
+                  "interfaces": [
+                    {
+                      "interface": "isp",
+                      "vni": 103,
+                      "remote_host": "router-isp-core",
+                      "ip": "10.10.0.5/24",
+                      "mtu": 1280
+                    }
+                  ],
+                  "routes": [
+                    {
+                      "to": "default",
+                      "via": "10.10.0.1",
+                      "dev": "isp",
+                      "onlink": true
+                    }
+                  ]
+                }
