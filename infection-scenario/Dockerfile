@@ -13,18 +13,20 @@ FROM $BASE_REPO'mentored-base-utils':$BASE_IMAGE_TAG AS utils
 
 # Main image
 FROM $BASE_REPO$BASE_IMAGE:$BASE_IMAGE_TAG
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install additional packages not in mentored-base
-RUN echo "deb http://ftp.debian.org/debian bookworm main non-free" >> /etc/apt/sources.list
-RUN apt-get update && apt-get install -y \
+RUN echo "deb http://ftp.debian.org/debian bookworm main non-free" > /etc/apt/sources.list.d/bookworm-non-free.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
     hping3 \
     hydra \
     nikto \
+    nmap \
     rsyslog \
+    openssh-server \
     ssh \
     sshpass \
-    wondershaper \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --break-system-packages distlib psutil pyaml==24.7.0 icmplib slowloris PySocks
@@ -36,9 +38,11 @@ WORKDIR /app
 
 COPY ./attacker.sh /app
 COPY ./vulnerable.sh /app
+COPY ./start_sshd.sh /app
 COPY ./10000_common_passwords /app
 COPY ./10_common_passwords /app
 COPY ./attacker.py /app
+RUN chmod +x /app/*.sh
 
 RUN echo "auth.* /app/results/sshd.log" > /etc/rsyslog.d/50-sshd.conf
 

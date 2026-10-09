@@ -1,1 +1,1 @@
-generic-botnet,infection-scenario,nginx-simple,nginx-simple-ssl,nginx-simple-ssl-h2-rapid-reset,network-monitor,generic-client,mqtt-simple,mqtt-attacks,ip_camera,rstp_stream_server,mentored-dnsmasq,http2-rapid-reset-vuln-app
+mentored-base-utils,nginx-simple-ssl,generic-client,mentored-dnsmasq,infection-scenario,generic-botnet

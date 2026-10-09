@@ -1,0 +1,486 @@
+Experiment:
+  name: bgp_hijack_infection_botnet_experiment
+  nodeactors:
+    - name: router-isp-core
+      replicas: 1
+      region: ufpe-master-vm1
+      persistent_volume_path:
+        - /app/results/
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "bridges": [
+                        {
+                          "name": "br-isp",
+                          "ip": "10.10.0.1/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "interfaces": [
+                        {
+                          "interface": "vxlan100",
+                          "vni": 100,
+                          "bridge": "br-isp",
+                          "remote_host": "router-office"
+                        },
+                        {
+                          "interface": "vxlan101",
+                          "vni": 101,
+                          "bridge": "br-isp",
+                          "remote_host": "router-attacker"
+                        },
+                        {
+                          "interface": "vxlan102",
+                          "vni": 102,
+                          "bridge": "br-isp",
+                          "remote_host": "router-home"
+                        },
+                        {
+                          "interface": "vxlan103",
+                          "vni": 103,
+                          "bridge": "br-isp",
+                          "remote_host": "dns-server"
+                        }
+                      ]
+                    }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                    frr version 8.5
+                    frr defaults traditional
+                    hostname router-isp-core
+                    log syslog informational
+
+                    router bgp 65000
+                     bgp router-id 10.10.0.1
+                     no bgp ebgp-requires-policy
+                     neighbor 10.10.0.2 remote-as 65001
+                     neighbor 10.10.0.2 description router-office
+                     neighbor 10.10.0.3 remote-as 65002
+                     neighbor 10.10.0.3 description router-attacker
+                     neighbor 10.10.0.4 remote-as 65003
+                     neighbor 10.10.0.4 description router-home
+
+                    address-family ipv4 unicast
+                     neighbor 10.10.0.2 activate
+                     # This below next-hop-self to re-write the next-hop if we want
+                     # neighbor 10.10.0.2 next-hop-self
+                     neighbor 10.10.0.3 activate
+                     # neighbor 10.10.0.3 next-hop-self
+                     neighbor 10.10.0.4 activate
+                     # neighbor 10.10.0.4 next-hop-self
+                    exit-address-family
+    - name: router-office
+      replicas: 1
+      persistent_volume_path:
+        - /app/results/
+      region: ufpe-master-vm1
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "bridges": [
+                        {
+                          "name": "br-isp",
+                          "ip": "10.10.0.2/24",
+                          "mtu": 1280
+                        },
+                        {
+                          "name": "br-off-lan",
+                          "ip": "192.168.100.1/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "interfaces": [
+                        {
+                          "interface": "vxlan100",
+                          "vni": 100,
+                          "bridge": "br-isp",
+                          "remote_host": "router-isp-core"
+                        },
+                        {
+                          "interface": "vxlan101",
+                          "vni": 101,
+                          "bridge": "br-off-lan",
+                          "remote_host": "server-http"
+                        }
+                      ]
+                    }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                    frr version 8.5
+                    frr defaults traditional
+                    hostname router-office
+                    log syslog informational
+
+                    router bgp 65001
+                     bgp router-id 10.10.0.2
+                     no bgp ebgp-requires-policy
+                     neighbor 10.10.0.1 remote-as 65000
+                     neighbor 10.10.0.1 description router-isp-core
+
+                     address-family ipv4 unicast
+                      neighbor 10.10.0.1 activate
+                      network 192.168.100.0/24
+                     exit-address-family
+    - name: router-home
+      persistent_volume_path:
+        - /app/results/
+      replicas: 1
+      region: ufpe-master-vm2
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "bridges": [
+                        {
+                          "name": "br-isp",
+                          "ip": "10.10.0.4/24",
+                          "mtu": 1280
+                        },
+                        {
+                          "name": "br-home-lan",
+                          "ip": "192.168.200.1/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "interfaces": [
+                        {
+                          "interface": "vxlan102",
+                          "vni": 102,
+                          "bridge": "br-isp",
+                          "remote_host": "router-isp-core"
+                        },
+                        {
+                          "interface": "vxlan103",
+                          "vni": 103,
+                          "bridge": "br-home-lan",
+                          "remote_host": "client-home"
+                        }
+                      ]
+                    }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                    frr version 8.5
+                    frr defaults traditional
+                    hostname router-home
+                    log syslog informational
+
+                    router bgp 65003
+                     bgp router-id 10.10.0.4
+                     no bgp ebgp-requires-policy
+                     neighbor 10.10.0.1 remote-as 65000
+                     neighbor 10.10.0.1 description router-isp-core
+
+                     address-family ipv4 unicast
+                      neighbor 10.10.0.1 activate
+                      network 192.168.200.0/24
+                     exit-address-family
+    - name: router-attacker
+      replicas: 1
+      persistent_volume_path:
+        - /app/results/
+      region: ufpe-master-vm3
+      containers:
+        - name: router
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: ENABLE_CAPTURE
+              value: "true"
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "bridges": [
+                        {
+                          "name": "br-isp",
+                          "ip": "10.10.0.3/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "interfaces": [
+                        {
+                          "interface": "vxlan101",
+                          "vni": 101,
+                          "bridge": "br-isp",
+                          "remote_host": "router-isp-core"
+                        }
+                      ]
+                    }
+            - name: FRR_CONF_CONTENT
+              value: |-
+                    frr version 8.5
+                    frr defaults traditional
+                    hostname router-attacker
+                    log syslog informational
+
+                    router bgp 65002
+                     bgp router-id 10.10.0.3
+                     no bgp ebgp-requires-policy
+                     neighbor 10.10.0.1 remote-as 65000
+                     neighbor 10.10.0.1 description router-isp-core
+
+                     address-family ipv4 unicast
+                      neighbor 10.10.0.1 activate
+                     exit-address-family
+    - name: attacker-node
+      replicas: 1
+      persistent_volume_path:
+        - /app/results/
+      region: ufpe-master-vm3
+      containers:
+        - name: attacker
+          image: ghcr.io/khalilsantana/infection-scenario:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["python3", "/app/attacker.py", "--target", "192.168.100.0/24"]
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "interfaces": [
+                        {
+                          "interface": "net1",
+                          "ip": "10.200.0.10/24",
+                          "vni": 102,
+                          "remote_host": "router-attacker",
+                          "mtu": 1280
+                        }
+                      ],
+                      "routes": [
+                        {
+                          "to": "default",
+                          "via": "10.10.0.3",
+                          "dev": "net1",
+                          "onlink": true
+                        }
+                      ]
+                    }
+            - name: TARGET_NETWORK
+              value: 192.168.100.0/24
+            - name: ATTACK_CMD
+              value: touch /FLAG && echo "Infection successful" >> /var/log/compromised.txt
+    - name: botnet-node
+      replicas: 1
+      persistent_volume_path:
+        - /app/results/
+      region: ufpe-master-vm3
+      containers:
+        - name: botnet
+          image: ghcr.io/khalilsantana/generic-botnet:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["/app/botnet_orchestrator.sh"]
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "interfaces": [
+                        {
+                          "interface": "net1",
+                          "ip": "10.200.0.11/24",
+                          "vni": 103,
+                          "remote_host": "router-isp-core",
+                          "mtu": 1280
+                        }
+                      ],
+                      "routes": [
+                        {
+                          "to": "default",
+                          "via": "10.10.0.1",
+                          "dev": "net1",
+                          "onlink": true
+                        }
+                      ]
+                    }
+            - name: TARGET_NETWORK
+              value: 192.168.200.0/24
+            - name: PASSWORD_LIST
+              value: /usr/share/wordlists/nmap.lst
+            - name: ATTACK_CMD
+              value: python3 /app/botnet_orchestrator.sh
+    - name: server-http
+      persistent_volume_path:
+        - /app/results/
+      replicas: 1
+      region: ufpe-master-vm1
+      containers:
+        - name: server-http
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "interfaces": [
+                        {
+                          "interface": "office-lan",
+                          "vni": 101,
+                          "remote_host": "router-office",
+                          "ip": "192.168.100.10/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "routes": [
+                        {
+                          "to": "default",
+                          "via": "192.168.100.1",
+                          "dev": "office-lan",
+                          "onlink": true
+                        }
+                      ]
+                    }
+            - name: TARGET_NETWORK
+              value: 192.168.200.0/24
+            - name: ATTACK_CMD
+              value: touch /FLAG && echo "Infection successful" >> /var/log/compromised.txt
+        - name: nginx
+          image: ghcr.io/khalilsantana/nginx-simple-ssl:latest
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+    - name: dns-server
+      persistent_volume_path:
+        - /app/results/
+      replicas: 1
+      region: ufpe-master-vm1
+      containers:
+        - name: dnsmasq
+          image: ghcr.io/khalilsantana/mentored-dnsmasq:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["dnsmasq", "--no-daemon"]
+          env:
+            - name: MENTORED_DNS_ENV_ENTRIES
+              value: 192.168.100.10 server-http
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "interfaces": [
+                        {
+                          "interface": "isp",
+                          "vni": 103,
+                          "remote_host": "router-isp-core",
+                          "ip": "10.10.0.5/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "routes": [
+                        {
+                          "to": "default",
+                          "via": "10.10.0.1",
+                          "dev": "isp",
+                          "onlink": true
+                        }
+                      ]
+                    }
+    - name: home-webserver
+      persistent_volume_path:
+        - /app/results/
+      replicas: 1
+      region: ufpe-master-vm2
+      containers:
+        - name: server
+          image: ghcr.io/khalilsantana/mentored-base-utils:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["sleep", "infinity"]
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          env:
+            - name: MENTORED_TOPOLOGY_CONFIG
+              value: |-
+                    {
+                      "cluster_pod_cidr": "10.244.0.0/16",
+                      "interfaces": [
+                        {
+                          "interface": "home-lan",
+                          "vni": 200,
+                          "remote_host": "router-home",
+                          "ip": "192.168.200.10/24",
+                          "mtu": 1280
+                        }
+                      ],
+                      "routes": [
+                        {
+                          "to": "default",
+                          "via": "192.168.200.1",
+                          "dev": "home-lan",
+                          "onlink": true
+                        }
+                      ]
+                    }
+        - name: nginx
+          image: ghcr.io/khalilsantana/nginx-simple-ssl:latest
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+        - name: vulnerable-sshd
+          image: ghcr.io/khalilsantana/infection-scenario:latest
+          imagePullPolicy: Always
+          command: ["/entry.sh"]
+          args: ["/app/start_sshd.sh"]
+          securityContext:
+            privileged: true

