@@ -296,10 +296,10 @@ def configure_topology():
     # 3. PROCESS CUSTOM ROUTES
     # --------------------------------------------------------------------------
     # Flush default routes on eth0 so the custom experiment default routes win
-    while True:
-        res = run_cmd(["ip", "route", "del", "default", "dev", "eth0"])
-        if res.returncode != 0:
-            break
+    # while True:
+        # res = run_cmd(["ip", "route", "del", "default", "dev", "eth0"])
+        # if res.returncode != 0:
+        #     break
 
     routes = config.get("routes", [])
     for r in routes:
