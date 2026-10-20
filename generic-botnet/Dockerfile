@@ -15,14 +15,14 @@ FROM $BASE_REPO'mentored-base-utils':$BASE_IMAGE_TAG AS utils
 FROM $BASE_REPO$BASE_IMAGE:$BASE_IMAGE_TAG
 
 # Install additional packages not in mentored-base
-RUN echo "deb http://ftp.debian.org/debian bookworm main non-free" > /etc/apt/sources.list.d/bookworm-non-free.list && \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     hping3 \
+    hydra \
     nikto \
     nmap \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages slowloris PySocks icmplib
+RUN pip3 install --break-system-packages PySocks icmplib
 
 # Copy rapidresetclient from builder
 COPY --from=gobuilder /usr/local/bin/rapidresetclient /usr/local/bin/rapidresetclient
@@ -34,4 +34,5 @@ COPY --from=utils /usr/local/bin/* /usr/local/bin/
 # Copy botnet attack scripts
 COPY botnet_orchestrator.sh /app/botnet_orchestrator.sh
 COPY hping3_attack.sh /app/hping3_attack.sh
+COPY ssh_weak_passwords.txt /app/ssh_weak_passwords.txt
 RUN chmod +x /app/*.sh

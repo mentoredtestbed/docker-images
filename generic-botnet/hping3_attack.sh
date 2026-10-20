@@ -4,7 +4,7 @@
 # Starts at T=60s (1 min), stops at T=120s (2 min)
 # Attack duration: 60 seconds
 
-TARGET_IP="192.168.100.10"
+TARGET_IP="${TARGET_IP:-192.168.100.10}"
 ATTACK_START=60
 ATTACK_STOP=120
 

@@ -10,7 +10,7 @@ TAG=$2  # eg 0.0.1
 TOBUILD=$3 # eg --all
 ENABLE_ARM64=${4:-}
 
-dependencies=("mentored-base" "generic-botnet")
+dependencies=("mentored-base" "mentored-base-utils" "generic-botnet")
 
 
 if [ -z "$REPO" ] || [ -z "$TAG" ]; then

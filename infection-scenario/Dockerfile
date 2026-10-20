@@ -17,8 +17,7 @@ FROM $BASE_REPO$BASE_IMAGE:$BASE_IMAGE_TAG
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install additional packages not in mentored-base
-RUN echo "deb http://ftp.debian.org/debian bookworm main non-free" > /etc/apt/sources.list.d/bookworm-non-free.list && \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     hping3 \
     hydra \
     nikto \

@@ -2,6 +2,8 @@ FROM debian:trixie-slim
 
 ENV LANG=C.UTF-8
 
+COPY debian-mirrors.source /etc/apt/sources.list.d/debian.sources
+
 RUN apt -qq -y update && \
     apt -qq -y install --no-install-recommends --no-install-suggests \
     argus-client \

