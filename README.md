@@ -8,10 +8,12 @@ Build instructions bellow:
 <details>
 
 ## First get the kubeconfig with a cluster that has both AArch64 and AMD64 nodes
+
 ```bash
 export KUBECONFIG=<....>
 ```
 ## Create a builder for AMD64 stuff
+
 ```bash
 docker buildx create \
   --bootstrap \
@@ -23,6 +25,7 @@ docker buildx create \
 ```
 
 ## Create a builder for AArch64, appending to the previous context
+
 ```bash
 docker buildx create \
   --bootstrap --append \
@@ -34,14 +37,17 @@ docker buildx create \
 ```
 
 ## Use build context
+
 ```bash
 docker buildx use mentored-ufmg-kube
 ```
+
 </details>
 
 ## Option 2) Local builds
 
 <details>
+
 ```bash
 docker buildx create \
   --name mentored-local-builder \
@@ -60,6 +66,7 @@ docker buildx use mentored-local-builder
 ```bash
 docker buildx ls # Should list both as inactive or running
 ```
+
 ### Bootstrap the buildkit in that builder:
 
 ```bash
@@ -71,6 +78,7 @@ docker buildx inspect --bootstrap
 ```bash
 docker buildx ls
 ```
+
 </details>
 
 ## Dispatch the build
